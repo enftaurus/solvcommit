@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pause, Play, LogOut } from "lucide-react";
+import { Pause, Play, LogOut, Sparkles } from "lucide-react";
 import { UserProfile, SyncStatus } from "../types";
 import { api } from "../api";
 
@@ -7,16 +7,20 @@ interface HeaderProps {
   user: UserProfile | null;
   syncStatus: SyncStatus | null;
   isOnline: boolean;
+  isDemo?: boolean;
   onRefresh: () => void;
   onLogout: () => void;
+  onExitDemo?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   user,
   syncStatus,
   isOnline,
+  isDemo = false,
   onRefresh,
   onLogout,
+  onExitDemo,
 }) => {
   const [isTogglingPause, setIsTogglingPause] = useState(false);
 
@@ -63,6 +67,12 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 border border-zinc-200">
               v1.0
             </span>
+            {isDemo && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200 flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-amber-600" />
+                Demo
+              </span>
+            )}
           </div>
         </div>
 
@@ -113,15 +123,25 @@ export const Header: React.FC<HeaderProps> = ({
               {/* User Dropdown / Logout */}
               <div className="flex items-center gap-2 pl-2 border-l border-zinc-200">
                 <span className="text-xs text-zinc-500 hidden sm:inline">
-                  User #{user.github_user_id}
+                  {isDemo ? "demo-developer" : `User #${user.github_user_id}`}
                 </span>
-                <button
-                  onClick={onLogout}
-                  className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition"
-                  title="Sign out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
+                {isDemo ? (
+                  <button
+                    onClick={onExitDemo}
+                    className="rounded-lg px-2 py-1 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition"
+                    title="Exit Demo Mode"
+                  >
+                    Exit Demo
+                  </button>
+                ) : (
+                  <button
+                    onClick={onLogout}
+                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition"
+                    title="Sign out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </>
           )}

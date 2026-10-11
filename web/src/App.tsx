@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Sparkles,
 } from "lucide-react";
 import { UserProfile, SyncStatus, Repository, SubmissionRow, Device } from "./types";
 import { api } from "./api";
@@ -20,10 +21,25 @@ import { SessionsManager } from "./components/SessionsManager";
 import { AccountSettings } from "./components/AccountSettings";
 import { LandingPage } from "./components/LandingPage";
 import { PairModal } from "./components/PairModal";
+import {
+  demoUser,
+  demoRepo,
+  demoStatus,
+  demoSubmissions,
+  demoDevices,
+} from "./demoData";
 
 export const App: React.FC = () => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [authChecking, setAuthChecking] = useState(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    return localStorage.getItem("leetsync_demo_mode") === "true";
+  });
+
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    return localStorage.getItem("leetsync_demo_mode") === "true" ? demoUser : null;
+  });
+  const [authChecking, setAuthChecking] = useState(() => {
+    return localStorage.getItem("leetsync_demo_mode") !== "true";
+  });
   const [isOnline, setIsOnline] = useState(true);
 
   // Active navigation tab
@@ -32,11 +48,21 @@ export const App: React.FC = () => {
   >("overview");
 
   // Core Data State
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
-  const [repo, setRepo] = useState<Repository | null>(null);
-  const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
-  const [totalSubmissions, setTotalSubmissions] = useState(0);
-  const [devices, setDevices] = useState<Device[]>([]);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(() => {
+    return localStorage.getItem("leetsync_demo_mode") === "true" ? demoStatus : null;
+  });
+  const [repo, setRepo] = useState<Repository | null>(() => {
+    return localStorage.getItem("leetsync_demo_mode") === "true" ? demoRepo : null;
+  });
+  const [submissions, setSubmissions] = useState<SubmissionRow[]>(() => {
+    return localStorage.getItem("leetsync_demo_mode") === "true" ? demoSubmissions : [];
+  });
+  const [totalSubmissions, setTotalSubmissions] = useState(() => {
+    return localStorage.getItem("leetsync_demo_mode") === "true" ? demoSubmissions.length : 0;
+  });
+  const [devices, setDevices] = useState<Device[]>(() => {
+    return localStorage.getItem("leetsync_demo_mode") === "true" ? demoDevices : [];
+  });
   const [loadingData, setLoadingData] = useState(false);
 
   // Pair Modal
@@ -52,8 +78,38 @@ export const App: React.FC = () => {
     }, 4000);
   }, []);
 
-  // Check initial user authentication
+  const handleEnterDemo = () => {
+    localStorage.setItem("leetsync_demo_mode", "true");
+    setIsDemoMode(true);
+    setUser(demoUser);
+    setSyncStatus(demoStatus);
+    setRepo(demoRepo);
+    setSubmissions(demoSubmissions);
+    setTotalSubmissions(demoSubmissions.length);
+    setDevices(demoDevices);
+    setIsOnline(true);
+    setAuthChecking(false);
+    showToast("Entered Interactive Demo Mode! All controls are live.", "success");
+  };
+
+  const handleExitDemo = () => {
+    localStorage.removeItem("leetsync_demo_mode");
+    setIsDemoMode(false);
+    setUser(null);
+    setSyncStatus(null);
+    setRepo(null);
+    setSubmissions([]);
+    setTotalSubmissions(0);
+    setDevices([]);
+    showToast("Exited demo mode", "success");
+  };
+
+  // Check initial user authentication if not in demo mode
   useEffect(() => {
+    if (isDemoMode) {
+      setAuthChecking(false);
+      return;
+    }
     let mounted = true;
     const checkAuth = async () => {
       try {
@@ -69,10 +125,19 @@ export const App: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isDemoMode]);
 
   // Refresh all dashboard state
   const loadDashboardData = useCallback(async () => {
+    if (isDemoMode) {
+      setLoadingData(true);
+      setTimeout(() => {
+        setLoadingData(false);
+        showToast("Demo metrics refreshed", "success");
+      }, 300);
+      return;
+    }
+
     if (!user) return;
     setLoadingData(true);
     try {
@@ -87,7 +152,7 @@ export const App: React.FC = () => {
       if (healthOk.status === "fulfilled") setIsOnline(healthOk.value);
       if (statusRes.status === "fulfilled") setSyncStatus(statusRes.value);
       if (repoRes.status === "fulfilled") setRepo(repoRes.value);
-      else if (repoRes.status === "rejected") setRepo(null); // No selected repo yet
+      else if (repoRes.status === "rejected") setRepo(null);
 
       if (subsRes.status === "fulfilled") {
         setSubmissions(subsRes.value.submissions || []);
@@ -102,18 +167,18 @@ export const App: React.FC = () => {
     } finally {
       setLoadingData(false);
     }
-  }, [user]);
+  }, [user, isDemoMode, showToast]);
 
   // Load data on user authenticated
   useEffect(() => {
-    if (user) {
+    if (user && !isDemoMode) {
       loadDashboardData();
     }
-  }, [user, loadDashboardData]);
+  }, [user, isDemoMode, loadDashboardData]);
 
-  // Periodic heartbeat / status poll (every 15s)
+  // Periodic heartbeat / status poll (every 15s) when authenticated
   useEffect(() => {
-    if (!user) return;
+    if (!user || isDemoMode) return;
     const interval = setInterval(async () => {
       try {
         const [h, s] = await Promise.all([api.checkHealth(), api.getSyncStatus()]);
@@ -124,9 +189,13 @@ export const App: React.FC = () => {
       }
     }, 15000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, isDemoMode]);
 
   const handleLogout = async () => {
+    if (isDemoMode) {
+      handleExitDemo();
+      return;
+    }
     try {
       await api.logout();
     } catch {
@@ -149,20 +218,44 @@ export const App: React.FC = () => {
 
   // Unauthenticated landing page
   if (!user) {
-    return <LandingPage />;
+    return <LandingPage onEnterDemo={handleEnterDemo} />;
   }
 
   const activeDeviceCount = devices.filter((d) => !d.revoked_at).length;
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-slate-900 font-sans antialiased flex flex-col selection:bg-slate-200">
+      {/* Demo Mode Notice Banner */}
+      {isDemoMode && (
+        <div className="bg-amber-50 border-b border-amber-200/80 px-4 py-2 text-xs text-amber-900">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Interactive Demo Mode:</strong> Exploring with sample repository and submissions data. All UI actions are fully interactive.
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleExitDemo}
+                className="font-medium text-amber-800 underline hover:text-amber-950 transition-colors"
+              >
+                Exit Demo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Header */}
       <Header
         user={user}
         syncStatus={syncStatus}
         isOnline={isOnline}
+        isDemo={isDemoMode}
         onRefresh={loadDashboardData}
         onLogout={handleLogout}
+        onExitDemo={handleExitDemo}
       />
 
       {/* Main Container */}

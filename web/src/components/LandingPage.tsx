@@ -9,10 +9,15 @@ import {
   Flame,
   CheckCircle2,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import { api } from "../api";
 
-export const LandingPage: React.FC = () => {
+interface LandingPageProps {
+  onEnterDemo: () => void;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
@@ -48,6 +53,13 @@ export const LandingPage: React.FC = () => {
 
           <div className="flex items-center space-x-3">
             <button
+              onClick={onEnterDemo}
+              className="inline-flex items-center space-x-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/80 px-3.5 py-2 text-xs font-semibold text-slate-800 transition-colors shadow-2xs"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span>Explore Demo</span>
+            </button>
+            <button
               onClick={handleSignIn}
               disabled={loading}
               className="inline-flex items-center space-x-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800 active:scale-[0.99] transition-all shadow-xs"
@@ -82,21 +94,22 @@ export const LandingPage: React.FC = () => {
           {/* CTA Group */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
-              onClick={handleSignIn}
-              disabled={loading}
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2.5 rounded-xl bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-800 active:scale-[0.99] transition-all shadow-sm"
+              onClick={onEnterDemo}
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2.5 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.99] transition-all shadow-sm"
             >
-              <Github className="h-4 w-4" />
-              <span>{loading ? "Redirecting..." : "Connect GitHub App"}</span>
+              <Sparkles className="h-4 w-4 text-amber-300" />
+              <span>Explore Interactive Demo</span>
               <ArrowRight className="h-4 w-4 text-slate-400" />
             </button>
 
-            <a
-              href="#architecture"
+            <button
+              onClick={handleSignIn}
+              disabled={loading}
               className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 transition-colors shadow-xs"
             >
-              <span>Explore Architecture</span>
-            </a>
+              <Github className="h-4 w-4" />
+              <span>{loading ? "Redirecting..." : "Connect GitHub App"}</span>
+            </button>
           </div>
 
           {/* Supported Browsers Pill */}
