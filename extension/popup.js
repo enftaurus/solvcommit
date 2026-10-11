@@ -1,6 +1,7 @@
 // LeetSync Popup Controller
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const extAPI = typeof browser !== "undefined" ? browser : chrome;
   const statusBadge = document.getElementById("statusBadge");
   const deviceIdVal = document.getElementById("deviceIdVal");
   const queueCountVal = document.getElementById("queueCountVal");
@@ -8,7 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const openDashboardBtn = document.getElementById("openDashboardBtn");
 
   // Query background for status
-  chrome.runtime.sendMessage({ action: "GET_QUEUE_STATUS" }, (res) => {
+  extAPI.runtime.sendMessage({ action: "GET_QUEUE_STATUS" }, (res) => {
     if (res && res.isPaired) {
       statusBadge.textContent = "Paired";
       statusBadge.className = "status-badge badge-paired";
@@ -38,6 +39,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   openDashboardBtn.addEventListener("click", () => {
-    chrome.tabs.create({ url: "http://localhost:8080" });
+    extAPI.tabs.create({ url: "http://localhost:8080" });
   });
 });

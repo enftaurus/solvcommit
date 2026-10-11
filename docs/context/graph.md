@@ -1,7 +1,7 @@
 # Knowledge Graph
 
 > Visual traceability graph connecting decisions, requirements, components, and phases.
-> Last updated: Phase 3 (Ingestion Pipeline)
+> Last updated: Phase 4 (GitHub Publishing)
 
 Source definition: [`graph/knowledge-graph.json`](file:///home/rajababu/intern/leetsync/graph/knowledge-graph.json)
 

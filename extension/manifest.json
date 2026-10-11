@@ -16,6 +16,12 @@
   "background": {
     "service_worker": "background.js"
   },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "leetsync@leetsync.dev",
+      "strict_min_version": "109.0"
+    }
+  },
   "content_scripts": [
     {
       "matches": [

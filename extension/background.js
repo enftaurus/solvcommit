@@ -1,25 +1,29 @@
-// LeetSync Background Service Worker (Manifest V3)
+// LeetSync Background Service Worker (Manifest V3 - Cross-browser: Chrome & Firefox)
 // Manages authentication tokens, offline submission queue, periodic retry, and backfill.
 
-importScripts("queue.js");
+if (typeof OfflineQueue === "undefined" && typeof importScripts === "function") {
+  importScripts("queue.js");
+}
 
+const extAPI = typeof browser !== "undefined" ? browser : chrome;
 const API_BASE_URL = "http://localhost:8080";
+
 const storageAdapter = {
-  get: (key) => new Promise((resolve) => chrome.storage.local.get(key, resolve)),
-  set: (obj) => new Promise((resolve) => chrome.storage.local.set(obj, resolve))
+  get: (key) => new Promise((resolve) => extAPI.storage.local.get(key, resolve)),
+  set: (obj) => new Promise((resolve) => extAPI.storage.local.set(obj, resolve))
 };
 
 const queue = new OfflineQueue(storageAdapter);
 
 // Initialize Alarms on Install / Startup
-chrome.runtime.onInstalled.addListener(() => {
-  console.log("[LeetSync] Extension installed/updated.");
+extAPI.runtime.onInstalled.addListener(() => {
+  console.log("[LeetSync] Extension installed/updated (cross-browser Chrome & Firefox).");
   // Setup alarm for queue drainage and periodic backfill (every 2 minutes)
-  chrome.alarms.create("leetsync_queue_drain", { periodInMinutes: 2 });
+  extAPI.alarms.create("leetsync_queue_drain", { periodInMinutes: 2 });
 });
 
 // Periodic Alarm Handler
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+extAPI.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "leetsync_queue_drain") {
     await processOfflineQueue();
   }
@@ -99,7 +103,7 @@ async function processOfflineQueue() {
 }
 
 // Runtime Message Dispatcher
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+extAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "ENQUEUE_SUBMISSION") {
     (async () => {
       try {

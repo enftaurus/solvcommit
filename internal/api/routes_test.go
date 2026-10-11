@@ -13,6 +13,8 @@ import (
 	"leetsync/internal/api"
 	"leetsync/internal/auth"
 	"leetsync/internal/devices"
+	"leetsync/internal/github"
+	"leetsync/internal/repositories"
 	"leetsync/internal/submissions"
 )
 
@@ -126,6 +128,73 @@ func (m *mockSubmissionManager) FindMissingSubmissions(ctx context.Context, user
 		return m.backfillFunc(ctx, userID, requestedIDs)
 	}
 	return &submissions.BackfillResponse{MissingSubmissionIDs: requestedIDs}, nil
+}
+
+type mockRepositoryManager struct {
+	listFunc   func(ctx context.Context, userID string) ([]github.RepositoryInfo, error)
+	selectFunc func(ctx context.Context, userID string, req *repositories.SelectRepoRequest) (*repositories.Repository, error)
+	getFunc    func(ctx context.Context, userID string) (*repositories.Repository, error)
+	updateFunc func(ctx context.Context, userID string, defaultBranch string) (*repositories.Repository, error)
+	verifyFunc func(ctx context.Context, userID string) error
+}
+
+func (m *mockRepositoryManager) ListAvailable(ctx context.Context, userID string) ([]github.RepositoryInfo, error) {
+	if m.listFunc != nil {
+		return m.listFunc(ctx, userID)
+	}
+	return []github.RepositoryInfo{{ID: 100, Owner: "octocat", Name: "leetcode", DefaultBranch: "main"}}, nil
+}
+
+func (m *mockRepositoryManager) SelectRepository(ctx context.Context, userID string, req *repositories.SelectRepoRequest) (*repositories.Repository, error) {
+	if m.selectFunc != nil {
+		return m.selectFunc(ctx, userID, req)
+	}
+	return &repositories.Repository{
+		ID:            "repo-123",
+		UserID:        userID,
+		GitHubRepoID:  req.GitHubRepoID,
+		Owner:         req.Owner,
+		Name:          req.Name,
+		DefaultBranch: req.DefaultBranch,
+		Status:        "active",
+	}, nil
+}
+
+func (m *mockRepositoryManager) GetSelected(ctx context.Context, userID string) (*repositories.Repository, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, userID)
+	}
+	return &repositories.Repository{
+		ID:            "repo-123",
+		UserID:        userID,
+		GitHubRepoID:  100,
+		Owner:         "octocat",
+		Name:          "leetcode",
+		DefaultBranch: "main",
+		Status:        "active",
+	}, nil
+}
+
+func (m *mockRepositoryManager) UpdateSelected(ctx context.Context, userID string, defaultBranch string) (*repositories.Repository, error) {
+	if m.updateFunc != nil {
+		return m.updateFunc(ctx, userID, defaultBranch)
+	}
+	return &repositories.Repository{
+		ID:            "repo-123",
+		UserID:        userID,
+		GitHubRepoID:  100,
+		Owner:         "octocat",
+		Name:          "leetcode",
+		DefaultBranch: defaultBranch,
+		Status:        "active",
+	}, nil
+}
+
+func (m *mockRepositoryManager) VerifySelected(ctx context.Context, userID string) error {
+	if m.verifyFunc != nil {
+		return m.verifyFunc(ctx, userID)
+	}
+	return nil
 }
 
 type mockGitHubClient struct {
@@ -541,5 +610,68 @@ func TestSyncBackfill(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &res)
 	if len(res.MissingSubmissionIDs) != 1 || res.MissingSubmissionIDs[0] != "2138016678" {
 		t.Errorf("unexpected backfill response: %+v", res)
+	}
+}
+
+func TestRepositoryEndpoints(t *testing.T) {
+	mockRepos := &mockRepositoryManager{}
+	h := &api.Handler{
+		Repositories:  mockRepos,
+		SessionSecret: testSecret(),
+	}
+	router := api.NewRouter(h)
+
+	sessionVal, _ := auth.MintSessionCookie(testSecret(), "user-1", 1*time.Hour)
+
+	// 1. List available repos
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/github/repositories", nil)
+	listReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	listRec := httptest.NewRecorder()
+	router.ServeHTTP(listRec, listReq)
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on list repos, got %d: %s", listRec.Code, listRec.Body.String())
+	}
+	var repos []github.RepositoryInfo
+	_ = json.Unmarshal(listRec.Body.Bytes(), &repos)
+	if len(repos) != 1 || repos[0].Name != "leetcode" {
+		t.Errorf("unexpected repos response: %+v", repos)
+	}
+
+	// 2. Select repository
+	selBody := []byte(`{"github_repo_id":100,"owner":"octocat","name":"leetcode","default_branch":"main"}`)
+	selReq := httptest.NewRequest(http.MethodPost, "/api/v1/repositories", bytes.NewReader(selBody))
+	selReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	selRec := httptest.NewRecorder()
+	router.ServeHTTP(selRec, selReq)
+	if selRec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 on select repo, got %d: %s", selRec.Code, selRec.Body.String())
+	}
+
+	// 3. Get selected repository
+	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/repositories/selected", nil)
+	getReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	getRec := httptest.NewRecorder()
+	router.ServeHTTP(getRec, getReq)
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on get selected repo, got %d", getRec.Code)
+	}
+
+	// 4. Update selected repository branch
+	updBody := []byte(`{"default_branch":"develop"}`)
+	updReq := httptest.NewRequest(http.MethodPut, "/api/v1/repositories/selected", bytes.NewReader(updBody))
+	updReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	updRec := httptest.NewRecorder()
+	router.ServeHTTP(updRec, updReq)
+	if updRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on update selected repo, got %d", updRec.Code)
+	}
+
+	// 5. Verify repository write access
+	verReq := httptest.NewRequest(http.MethodPost, "/api/v1/repositories/verify", nil)
+	verReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	verRec := httptest.NewRecorder()
+	router.ServeHTTP(verRec, verReq)
+	if verRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on verify repo, got %d", verRec.Code)
 	}
 }

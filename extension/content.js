@@ -97,7 +97,8 @@ async function handleSubmissionCaptured(submissionId) {
 
     console.log("[LeetSync] Enqueueing accepted submission:", payload.submission_id, payload.problem_slug);
 
-    chrome.runtime.sendMessage({
+    const extAPI = typeof browser !== "undefined" ? browser : chrome;
+    extAPI.runtime.sendMessage({
       action: "ENQUEUE_SUBMISSION",
       payload
     }, (res) => {

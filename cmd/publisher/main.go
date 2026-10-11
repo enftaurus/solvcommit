@@ -10,6 +10,8 @@ import (
 
 	"leetsync/internal/config"
 	"leetsync/internal/database"
+	"leetsync/internal/github"
+	"leetsync/internal/publisher"
 	"leetsync/internal/queue"
 	"leetsync/internal/telemetry"
 )
@@ -44,17 +46,44 @@ func main() {
 		logger.Info("Publisher connected to Kafka successfully", "brokers", cfg.KafkaBrokers, "topic", cfg.KafkaTopic)
 	}
 
+	// GitHub App client
+	ghAppID := os.Getenv("GITHUB_APP_ID")
+	ghKeyPath := os.Getenv("GITHUB_APP_PRIVATE_KEY_PATH")
+	var ghAppPEM []byte
+	if ghKeyPath != "" {
+		ghAppPEM, _ = os.ReadFile(ghKeyPath)
+	}
+	var ghClient github.Client
+	if ghAppID != "" && len(ghAppPEM) > 0 {
+		ghClient, err = github.NewClient(ghAppID, ghAppPEM, "")
+		if err != nil {
+			logger.Warn("Failed to initialize GitHub App client", "error", err)
+		}
+	}
+
+	// Initialize Publisher Worker
+	worker := publisher.NewWorker(db.Pool, ghClient, logger)
+	reader := kafkaClient.NewReader("leetsync-publisher")
+	defer reader.Close()
+
+	// Start consumer in background goroutine
+	go func() {
+		if err := worker.RunConsumer(ctx, reader); err != nil {
+			logger.Error("Publisher consumer loop error", "error", err)
+		}
+	}()
+
+	logger.Info("LeetSync Publisher worker running and listening for submissions")
+
 	// Worker shutdown channel
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
-	logger.Info("LeetSync Publisher scaffold ready, listening for shutdown signals...")
-
-	// In Phase 4, the consumer worker loop runs here
 	<-shutdown
 	logger.Info("Shutting down Publisher worker gracefully...")
+	cancel()
 
 	// Allow brief cleanup
-	time.Sleep(200 * time.Millisecond)
-	logger.Info("LeetSync Publisher worker stopped")
+	time.Sleep(300 * time.Millisecond)
+	logger.Info("LeetSync Publisher worker stopped cleanly")
 }

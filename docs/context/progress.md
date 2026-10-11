@@ -6,8 +6,8 @@
 See [`docs/PRD.md#phases-mvp-and-acceptance`](file:///home/rajababu/intern/leetsync/docs/PRD.md#phases-mvp-and-acceptance) for phase exit criteria.
 
 ## Current Status
-- **Current Phase**: Phase 4 (GitHub Publishing)
-- **Status**: Phase 3 Ingestion Pipeline completed and verified. Ingestion endpoint, strict "Accepted" validation, 64-bit IDs, Kafka production with acks=all, PostgreSQL thin metadata rows, extension offline queue with exponential backoff, and backfill discovery pass all automated unit and integration tests.
+- **Current Phase**: Phase 5 (Dashboard)
+- **Status**: Phase 4 GitHub Publishing completed and verified. GitHub App client with ephemeral token caching, repository selection with non-destructive README handling, publisher worker with per-repo commit serialization, ambiguous write recovery, and path conflict protection all pass automated tests.
 - **Blocked**: None.
 
 ## Phase Checklist
@@ -16,7 +16,7 @@ See [`docs/PRD.md#phases-mvp-and-acceptance`](file:///home/rajababu/intern/leets
 - [x] **Phase 1: Scaffold & Infrastructure**: Go module, Docker Compose (PostgreSQL, Kafka), migrations, `dev.sh`.
 - [x] **Phase 2: Identity & Sessions**: GitHub App, device pairing, rotating refresh tokens with reuse detection, IP recording.
 - [x] **Phase 3: Ingestion Pipeline**: Ingestion endpoint, schema validation, Kafka producer (`acks=all`), offline extension queue, backfill.
-- [ ] **Phase 4: GitHub Publishing**: Safe file layout (`submission-<id>.<ext>`), serialized repo commits, idempotent retry.
+- [x] **Phase 4: GitHub Publishing**: Safe file layout (`submission-<id>.<ext>`), serialized repo commits, idempotent retry.
 - [ ] **Phase 5: Dashboard**: React + Vite UI, repository selection, device sessions, sync history, retry/resend controls.
 - [ ] **Phase 6: Reliability & Release Readiness**: Concurrency stress tests, failure recovery, security audit, deployment documentation.
 
@@ -35,3 +35,5 @@ See [`docs/PRD.md#phases-mvp-and-acceptance`](file:///home/rajababu/intern/leets
 12. `ponytail: stdlib HMAC access tokens` - Standard library HMAC-SHA256 bearer tokens instead of heavyweight external JWT dependencies.
 13. `ponytail: single-column token reuse check` - Tracking `previous_token_hash` directly on the device row to detect reuse without a separate audit table.
 14. `ponytail: native node:test runner for extension` - Using Node's built-in test runner without external npm packages for offline queue unit testing.
+15. `ponytail: stdlib RS256 JWT minting` - Using Go standard library crypto/rsa and crypto/sha256 to mint GitHub App JWTs without external JWT dependencies.
+16. `ponytail: sync.Map per-repo serialization` - In-memory mutex map for serializing commits per repository without distributed locking.
