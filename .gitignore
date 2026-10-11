@@ -1,0 +1,33 @@
+# Environment and secrets
+.env
+*.env
+*.env.*
+*.secret
+
+# Binaries and builds
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+vendor/
+*.test
+*.out
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store

@@ -1,0 +1,1417 @@
+{
+  "nodes": [
+    {
+      "id": "phase-0",
+      "type": "Phase",
+      "label": "Phase 0: Capture Spike",
+      "source": "docs/PRD.md#phases-mvp-and-acceptance"
+    },
+    {
+      "id": "phase-1",
+      "type": "Phase",
+      "label": "Phase 1: Scaffold & Infrastructure",
+      "source": "docs/PRD.md#phases-mvp-and-acceptance"
+    },
+    {
+      "id": "phase-2",
+      "type": "Phase",
+      "label": "Phase 2: Identity & Sessions",
+      "source": "docs/PRD.md#phases-mvp-and-acceptance"
+    },
+    {
+      "id": "phase-3",
+      "type": "Phase",
+      "label": "Phase 3: Ingestion Pipeline",
+      "source": "docs/PRD.md#phases-mvp-and-acceptance"
+    },
+    {
+      "id": "phase-4",
+      "type": "Phase",
+      "label": "Phase 4: GitHub Publishing",
+      "source": "docs/PRD.md#phases-mvp-and-acceptance"
+    },
+    {
+      "id": "phase-5",
+      "type": "Phase",
+      "label": "Phase 5: Dashboard",
+      "source": "docs/PRD.md#phases-mvp-and-acceptance"
+    },
+    {
+      "id": "phase-6",
+      "type": "Phase",
+      "label": "Phase 6: Reliability & Release Readiness",
+      "source": "docs/PRD.md#phases-mvp-and-acceptance"
+    },
+    {
+      "id": "comp-extension",
+      "type": "Component",
+      "label": "Chrome Extension",
+      "source": "docs/PRD.md#architecture"
+    },
+    {
+      "id": "comp-web",
+      "type": "Component",
+      "label": "Web Dashboard",
+      "source": "docs/PRD.md#architecture"
+    },
+    {
+      "id": "comp-api",
+      "type": "Component",
+      "label": "Go API",
+      "source": "docs/PRD.md#architecture"
+    },
+    {
+      "id": "comp-publisher",
+      "type": "Component",
+      "label": "Go Publisher",
+      "source": "docs/PRD.md#architecture"
+    },
+    {
+      "id": "comp-kafka",
+      "type": "Component",
+      "label": "Kafka Cluster",
+      "source": "docs/PRD.md#architecture"
+    },
+    {
+      "id": "comp-postgres",
+      "type": "Component",
+      "label": "PostgreSQL DB",
+      "source": "docs/PRD.md#architecture"
+    },
+    {
+      "id": "comp-github",
+      "type": "Component",
+      "label": "GitHub API",
+      "source": "docs/PRD.md#architecture"
+    },
+    {
+      "id": "topic-submissions",
+      "type": "Topic",
+      "label": "submissions",
+      "source": "docs/context/kafka.md"
+    },
+    {
+      "id": "table-users",
+      "type": "Table",
+      "label": "users",
+      "source": "docs/context/data-model.md"
+    },
+    {
+      "id": "table-github-connections",
+      "type": "Table",
+      "label": "github_connections",
+      "source": "docs/context/data-model.md"
+    },
+    {
+      "id": "table-repositories",
+      "type": "Table",
+      "label": "repositories",
+      "source": "docs/context/data-model.md"
+    },
+    {
+      "id": "table-devices",
+      "type": "Table",
+      "label": "devices",
+      "source": "docs/context/data-model.md"
+    },
+    {
+      "id": "table-submissions",
+      "type": "Table",
+      "label": "submissions",
+      "source": "docs/context/data-model.md"
+    },
+    {
+      "id": "ep-auth-github-start",
+      "type": "Endpoint",
+      "label": "GET /auth/github/start",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-auth-github-callback",
+      "type": "Endpoint",
+      "label": "GET /auth/github/callback",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-auth-logout",
+      "type": "Endpoint",
+      "label": "POST /auth/logout",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-me",
+      "type": "Endpoint",
+      "label": "GET /me",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-me-delete",
+      "type": "Endpoint",
+      "label": "DELETE /me",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-devices-pair",
+      "type": "Endpoint",
+      "label": "POST /devices/pair",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-devices-refresh",
+      "type": "Endpoint",
+      "label": "POST /devices/refresh",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-devices-list",
+      "type": "Endpoint",
+      "label": "GET /devices",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-devices-revoke",
+      "type": "Endpoint",
+      "label": "DELETE /devices/{deviceId}",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-gh-repos",
+      "type": "Endpoint",
+      "label": "GET /github/repositories",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-repos",
+      "type": "Endpoint",
+      "label": "POST /repositories",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-repos-selected",
+      "type": "Endpoint",
+      "label": "GET/PUT /repositories/selected",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-repos-verify",
+      "type": "Endpoint",
+      "label": "POST /repositories/verify",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-sync-submissions",
+      "type": "Endpoint",
+      "label": "POST /sync/submissions",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-sync-backfill",
+      "type": "Endpoint",
+      "label": "POST /sync/backfill",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-sync-resend",
+      "type": "Endpoint",
+      "label": "GET /sync/resend-requests",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-sync-status",
+      "type": "Endpoint",
+      "label": "GET /sync/status",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-sync-submissions-list",
+      "type": "Endpoint",
+      "label": "GET /sync/submissions",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-sync-retry",
+      "type": "Endpoint",
+      "label": "POST /sync/submissions/{id}/retry",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-sync-pause",
+      "type": "Endpoint",
+      "label": "POST /sync/pause",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-sync-resume",
+      "type": "Endpoint",
+      "label": "POST /sync/resume",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-health-live",
+      "type": "Endpoint",
+      "label": "GET /health/live",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "ep-health-ready",
+      "type": "Endpoint",
+      "label": "GET /health/ready",
+      "source": "docs/context/api.md"
+    },
+    {
+      "id": "D-01",
+      "type": "Decision",
+      "label": "Go backend stack",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-02",
+      "type": "Decision",
+      "label": "PostgreSQL metadata only",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-03",
+      "type": "Decision",
+      "label": "Kafka kept, code in messages",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-04",
+      "type": "Decision",
+      "label": "Extension-push capture",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-05",
+      "type": "Decision",
+      "label": "No backend polling, backfill",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-06",
+      "type": "Decision",
+      "label": "Kafka retention bounds code",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-07",
+      "type": "Decision",
+      "label": "Resend from extension on expiry",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-08",
+      "type": "Decision",
+      "label": "Kafka acks=all, no outbox",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-09",
+      "type": "Decision",
+      "label": "Metadata row at receive time",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-10",
+      "type": "Decision",
+      "label": "Accepted submissions only",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-11",
+      "type": "Decision",
+      "label": "Distinct file per submission",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-12",
+      "type": "Decision",
+      "label": "GitHub auth, rotating tokens",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-13",
+      "type": "Decision",
+      "label": "IP for display only",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-14",
+      "type": "Decision",
+      "label": "Existing repo, keep README",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-15",
+      "type": "Decision",
+      "label": "Two Go processes, React web",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-16",
+      "type": "Decision",
+      "label": "Docker Compose infra, dev.sh",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-17",
+      "type": "Decision",
+      "label": "Phase 0 capture spike first",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-18",
+      "type": "Decision",
+      "label": "GitHub App authorization",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-19",
+      "type": "Decision",
+      "label": "In-memory installation tokens",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-20",
+      "type": "Decision",
+      "label": "Drop DLQ topic, row status",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-21",
+      "type": "Decision",
+      "label": "Drop metrics endpoint, structured logs",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-22",
+      "type": "Decision",
+      "label": "First/last IP only, drop audit table",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-23",
+      "type": "Decision",
+      "label": "Defer repo creation API",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "D-24",
+      "type": "Decision",
+      "label": "64-bit submission IDs",
+      "source": "docs/context/decisions.md"
+    },
+    {
+      "id": "FR-AUTH-01",
+      "type": "Requirement",
+      "label": "FR-AUTH-01: GitHub OAuth sign-in",
+      "source": "docs/PRD.md#authentication-and-accounts"
+    },
+    {
+      "id": "FR-AUTH-02",
+      "type": "Requirement",
+      "label": "FR-AUTH-02: Minimum GitHub scopes",
+      "source": "docs/PRD.md#authentication-and-accounts"
+    },
+    {
+      "id": "FR-AUTH-03",
+      "type": "Requirement",
+      "label": "FR-AUTH-03: Cookies, CSRF, expiry",
+      "source": "docs/PRD.md#authentication-and-accounts"
+    },
+    {
+      "id": "FR-AUTH-04",
+      "type": "Requirement",
+      "label": "FR-AUTH-04: Disconnect, revoke, delete",
+      "source": "docs/PRD.md#authentication-and-accounts"
+    },
+    {
+      "id": "FR-EXT-01",
+      "type": "Requirement",
+      "label": "FR-EXT-01: Onboarding on install",
+      "source": "docs/PRD.md#chrome-extension"
+    },
+    {
+      "id": "FR-EXT-02",
+      "type": "Requirement",
+      "label": "FR-EXT-02: Device pairing session",
+      "source": "docs/PRD.md#chrome-extension"
+    },
+    {
+      "id": "FR-EXT-03",
+      "type": "Requirement",
+      "label": "FR-EXT-03: In-session LeetCode capture",
+      "source": "docs/PRD.md#chrome-extension"
+    },
+    {
+      "id": "FR-EXT-04",
+      "type": "Requirement",
+      "label": "FR-EXT-04: Extension min permissions",
+      "source": "docs/PRD.md#chrome-extension"
+    },
+    {
+      "id": "FR-EXT-05",
+      "type": "Requirement",
+      "label": "FR-EXT-05: Offline queue and backoff",
+      "source": "docs/PRD.md#chrome-extension"
+    },
+    {
+      "id": "FR-EXT-06",
+      "type": "Requirement",
+      "label": "FR-EXT-06: Extension popup status",
+      "source": "docs/PRD.md#chrome-extension"
+    },
+    {
+      "id": "FR-ING-01",
+      "type": "Requirement",
+      "label": "FR-ING-01: Submission payload schema",
+      "source": "docs/PRD.md#submission-ingestion"
+    },
+    {
+      "id": "FR-ING-02",
+      "type": "Requirement",
+      "label": "FR-ING-02: Validation & rate limits",
+      "source": "docs/PRD.md#submission-ingestion"
+    },
+    {
+      "id": "FR-ING-03",
+      "type": "Requirement",
+      "label": "FR-ING-03: User + ID deduplication",
+      "source": "docs/PRD.md#submission-ingestion"
+    },
+    {
+      "id": "FR-ING-04",
+      "type": "Requirement",
+      "label": "FR-ING-04: Kafka ack before response",
+      "source": "docs/PRD.md#submission-ingestion"
+    },
+    {
+      "id": "FR-ING-05",
+      "type": "Requirement",
+      "label": "FR-ING-05: Extension backfill",
+      "source": "docs/PRD.md#submission-ingestion"
+    },
+    {
+      "id": "FR-ING-06",
+      "type": "Requirement",
+      "label": "FR-ING-06: No backend polling",
+      "source": "docs/PRD.md#submission-ingestion"
+    },
+    {
+      "id": "FR-GH-01",
+      "type": "Requirement",
+      "label": "FR-GH-01: Repository creation",
+      "source": "docs/PRD.md#github-repository"
+    },
+    {
+      "id": "FR-GH-02",
+      "type": "Requirement",
+      "label": "FR-GH-02: Connect existing repository",
+      "source": "docs/PRD.md#github-repository"
+    },
+    {
+      "id": "FR-GH-03",
+      "type": "Requirement",
+      "label": "FR-GH-03: README safe handling",
+      "source": "docs/PRD.md#github-repository"
+    },
+    {
+      "id": "FR-GH-04",
+      "type": "Requirement",
+      "label": "FR-GH-04: Problem directory layout",
+      "source": "docs/PRD.md#github-repository"
+    },
+    {
+      "id": "FR-GH-05",
+      "type": "Requirement",
+      "label": "FR-GH-05: Deterministic commit message",
+      "source": "docs/PRD.md#github-repository"
+    },
+    {
+      "id": "FR-GH-06",
+      "type": "Requirement",
+      "label": "FR-GH-06: Serialized commits, no force",
+      "source": "docs/PRD.md#github-repository"
+    },
+    {
+      "id": "FR-HIST-01",
+      "type": "Requirement",
+      "label": "FR-HIST-01: Preserve distinct submissions",
+      "source": "docs/PRD.md#submission-history"
+    },
+    {
+      "id": "FR-HIST-02",
+      "type": "Requirement",
+      "label": "FR-HIST-02: Idempotent reprocessing",
+      "source": "docs/PRD.md#submission-history"
+    },
+    {
+      "id": "FR-HIST-03",
+      "type": "Requirement",
+      "label": "FR-HIST-03: Path check crash recovery",
+      "source": "docs/PRD.md#submission-history"
+    },
+    {
+      "id": "FR-HIST-04",
+      "type": "Requirement",
+      "label": "FR-HIST-04: Conflict detection",
+      "source": "docs/PRD.md#submission-history"
+    },
+    {
+      "id": "FR-DASH-01",
+      "type": "Requirement",
+      "label": "FR-DASH-01: Pause and resume sync",
+      "source": "docs/PRD.md#dashboard"
+    },
+    {
+      "id": "FR-DASH-02",
+      "type": "Requirement",
+      "label": "FR-DASH-02: Manual retry",
+      "source": "docs/PRD.md#dashboard"
+    },
+    {
+      "id": "FR-DASH-03",
+      "type": "Requirement",
+      "label": "FR-DASH-03: Accurate state display",
+      "source": "docs/PRD.md#dashboard"
+    },
+    {
+      "id": "FR-DASH-04",
+      "type": "Requirement",
+      "label": "FR-DASH-04: Read-only queries",
+      "source": "docs/PRD.md#dashboard"
+    },
+    {
+      "id": "FR-ERR-01",
+      "type": "Requirement",
+      "label": "FR-ERR-01: Transient failure retries",
+      "source": "docs/PRD.md#failure-recovery"
+    },
+    {
+      "id": "FR-ERR-02",
+      "type": "Requirement",
+      "label": "FR-ERR-02: Permanent failure handling",
+      "source": "docs/PRD.md#failure-recovery"
+    },
+    {
+      "id": "FR-ERR-03",
+      "type": "Requirement",
+      "label": "FR-ERR-03: Dead-letter queue",
+      "source": "docs/PRD.md#failure-recovery"
+    },
+    {
+      "id": "FR-ERR-04",
+      "type": "Requirement",
+      "label": "FR-ERR-04: Safe logs and metrics",
+      "source": "docs/PRD.md#failure-recovery"
+    },
+    {
+      "id": "OQ-01",
+      "type": "OpenQuestion",
+      "label": "OQ-01: In-session capture & ToS",
+      "source": "docs/context/open-questions.md"
+    },
+    {
+      "id": "OQ-02",
+      "type": "OpenQuestion",
+      "label": "OQ-02: GitHub OAuth App vs GitHub App",
+      "source": "docs/context/open-questions.md"
+    },
+    {
+      "id": "OQ-03",
+      "type": "OpenQuestion",
+      "label": "OQ-03: Token encryption & key rotation",
+      "source": "docs/context/open-questions.md"
+    },
+    {
+      "id": "OQ-04",
+      "type": "OpenQuestion",
+      "label": "OQ-04: Existing repo files/README policy",
+      "source": "docs/context/open-questions.md"
+    },
+    {
+      "id": "OQ-05",
+      "type": "OpenQuestion",
+      "label": "OQ-05: Retention periods (IP, logs, Kafka)",
+      "source": "docs/context/open-questions.md"
+    },
+    {
+      "id": "OQ-06",
+      "type": "OpenQuestion",
+      "label": "OQ-06: Scale volume & production deployment",
+      "source": "docs/context/open-questions.md"
+    },
+    {
+      "id": "RISK-leetcode-changes",
+      "type": "Risk",
+      "label": "LeetCode markup/API changes",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "RISK-client-asserted-data",
+      "type": "Risk",
+      "label": "Client-asserted submission data",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "RISK-missed-submissions",
+      "type": "Risk",
+      "label": "Missed submissions when offline",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "RISK-code-in-kafka",
+      "type": "Risk",
+      "label": "Source code exposure in Kafka",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "RISK-retention-vs-outages",
+      "type": "Risk",
+      "label": "Retention expiry during outages",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "RISK-github-rate-limits",
+      "type": "Risk",
+      "label": "GitHub API rate limits",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "RISK-duplicate-processing",
+      "type": "Risk",
+      "label": "Duplicate processing on crash/retry",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "RISK-ip-privacy",
+      "type": "Risk",
+      "label": "IP address privacy regulations",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "RISK-scope-growth",
+      "type": "Risk",
+      "label": "Scope creep beyond MVP",
+      "source": "docs/PRD.md#open-decisions-and-risks"
+    },
+    {
+      "id": "pkg-config",
+      "type": "Package",
+      "label": "internal/config",
+      "source": "internal/config/config.go"
+    },
+    {
+      "id": "pkg-telemetry",
+      "type": "Package",
+      "label": "internal/telemetry",
+      "source": "internal/telemetry/logger.go"
+    },
+    {
+      "id": "pkg-database",
+      "type": "Package",
+      "label": "internal/database",
+      "source": "internal/database/db.go"
+    },
+    {
+      "id": "pkg-queue",
+      "type": "Package",
+      "label": "internal/queue",
+      "source": "internal/queue/kafka.go"
+    },
+    {
+      "id": "pkg-api",
+      "type": "Package",
+      "label": "internal/api",
+      "source": "internal/api/routes.go"
+    },
+    {
+      "id": "pkg-auth",
+      "type": "Package",
+      "label": "internal/auth",
+      "source": "internal/auth/tokens.go"
+    },
+    {
+      "id": "pkg-devices",
+      "type": "Package",
+      "label": "internal/devices",
+      "source": "internal/devices/service.go"
+    },
+    {
+      "id": "file-dev-sh",
+      "type": "File",
+      "label": "dev.sh",
+      "source": "dev.sh"
+    },
+    {
+      "id": "file-docker-compose",
+      "type": "File",
+      "label": "docker-compose.yml",
+      "source": "docker-compose.yml"
+    },
+    {
+      "id": "file-identity-test",
+      "type": "File",
+      "label": "tests/identity_sessions_integration_test.go",
+      "source": "tests/identity_sessions_integration_test.go"
+    }
+  ],
+  "edges": [
+    {
+      "from": "pkg-config",
+      "to": "FR-ERR-04",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-telemetry",
+      "to": "FR-ERR-04",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-database",
+      "to": "FR-ERR-04",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-queue",
+      "to": "FR-ING-04",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-api",
+      "to": "FR-ERR-04",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-auth",
+      "to": "FR-AUTH-01",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-auth",
+      "to": "FR-AUTH-03",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-auth",
+      "to": "FR-AUTH-04",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-devices",
+      "to": "FR-EXT-02",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-devices",
+      "to": "D-12",
+      "type": "implements"
+    },
+    {
+      "from": "pkg-devices",
+      "to": "D-13",
+      "type": "implements"
+    },
+    {
+      "from": "file-dev-sh",
+      "to": "D-16",
+      "type": "implements"
+    },
+    {
+      "from": "file-docker-compose",
+      "to": "D-16",
+      "type": "implements"
+    },
+    {
+      "from": "file-identity-test",
+      "to": "FR-AUTH-01",
+      "type": "implements"
+    },
+    {
+      "from": "FR-AUTH-01",
+      "to": "phase-2",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-AUTH-02",
+      "to": "phase-2",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-AUTH-03",
+      "to": "phase-2",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-AUTH-04",
+      "to": "phase-2",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-EXT-01",
+      "to": "phase-5",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-EXT-02",
+      "to": "phase-2",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-EXT-03",
+      "to": "phase-0",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-EXT-04",
+      "to": "phase-0",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-EXT-05",
+      "to": "phase-3",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-EXT-06",
+      "to": "phase-5",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ING-01",
+      "to": "phase-3",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ING-02",
+      "to": "phase-3",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ING-03",
+      "to": "phase-3",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ING-04",
+      "to": "phase-3",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ING-05",
+      "to": "phase-3",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ING-06",
+      "to": "phase-3",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-GH-01",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-GH-02",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-GH-03",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-GH-04",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-GH-05",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-GH-06",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-HIST-01",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-HIST-02",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-HIST-03",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-HIST-04",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-DASH-01",
+      "to": "phase-5",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-DASH-02",
+      "to": "phase-5",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-DASH-03",
+      "to": "phase-5",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-DASH-04",
+      "to": "phase-5",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ERR-01",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ERR-02",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ERR-03",
+      "to": "phase-4",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ERR-04",
+      "to": "phase-1",
+      "type": "belongs_to"
+    },
+    {
+      "from": "FR-ING-01",
+      "to": "D-01",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-HIST-01",
+      "to": "D-02",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-HIST-02",
+      "to": "D-02",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ING-04",
+      "to": "D-03",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ERR-03",
+      "to": "D-03",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-EXT-03",
+      "to": "D-04",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-EXT-04",
+      "to": "D-04",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ING-05",
+      "to": "D-05",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ING-06",
+      "to": "D-05",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ERR-01",
+      "to": "D-06",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-DASH-02",
+      "to": "D-07",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ING-04",
+      "to": "D-08",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-DASH-03",
+      "to": "D-09",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ING-02",
+      "to": "D-10",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-GH-04",
+      "to": "D-11",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-GH-05",
+      "to": "D-11",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-GH-06",
+      "to": "D-11",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-HIST-01",
+      "to": "D-11",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-AUTH-01",
+      "to": "D-12",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-EXT-02",
+      "to": "D-12",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-AUTH-03",
+      "to": "D-13",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-GH-01",
+      "to": "D-14",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-GH-02",
+      "to": "D-14",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-GH-03",
+      "to": "D-14",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ERR-04",
+      "to": "D-15",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ERR-04",
+      "to": "D-16",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-EXT-03",
+      "to": "D-17",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-AUTH-02",
+      "to": "D-18",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-AUTH-02",
+      "to": "D-19",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ERR-03",
+      "to": "D-20",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ERR-04",
+      "to": "D-21",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-AUTH-04",
+      "to": "D-22",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-GH-01",
+      "to": "D-23",
+      "type": "decided_by"
+    },
+    {
+      "from": "FR-ING-01",
+      "to": "D-24",
+      "type": "decided_by"
+    },
+    {
+      "from": "comp-extension",
+      "to": "ep-sync-submissions",
+      "type": "calls"
+    },
+    {
+      "from": "comp-extension",
+      "to": "ep-sync-backfill",
+      "type": "calls"
+    },
+    {
+      "from": "comp-extension",
+      "to": "ep-sync-resend",
+      "type": "calls"
+    },
+    {
+      "from": "comp-extension",
+      "to": "ep-devices-pair",
+      "type": "calls"
+    },
+    {
+      "from": "comp-extension",
+      "to": "ep-devices-refresh",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-auth-github-start",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-auth-github-callback",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-me",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-devices-list",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-devices-revoke",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-gh-repos",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-repos",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-sync-status",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-sync-submissions-list",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-sync-retry",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-sync-pause",
+      "type": "calls"
+    },
+    {
+      "from": "comp-web",
+      "to": "ep-sync-resume",
+      "type": "calls"
+    },
+    {
+      "from": "comp-api",
+      "to": "topic-submissions",
+      "type": "produces"
+    },
+    {
+      "from": "comp-api",
+      "to": "table-users",
+      "type": "writes"
+    },
+    {
+      "from": "comp-api",
+      "to": "table-github-connections",
+      "type": "writes"
+    },
+    {
+      "from": "comp-api",
+      "to": "table-repositories",
+      "type": "writes"
+    },
+    {
+      "from": "comp-api",
+      "to": "table-devices",
+      "type": "writes"
+    },
+    {
+      "from": "comp-api",
+      "to": "table-submissions",
+      "type": "writes"
+    },
+    {
+      "from": "comp-publisher",
+      "to": "topic-submissions",
+      "type": "consumes"
+    },
+    {
+      "from": "comp-publisher",
+      "to": "comp-github",
+      "type": "calls"
+    },
+    {
+      "from": "comp-publisher",
+      "to": "table-submissions",
+      "type": "writes"
+    },
+    {
+      "from": "comp-publisher",
+      "to": "table-repositories",
+      "type": "reads"
+    },
+    {
+      "from": "comp-publisher",
+      "to": "table-github-connections",
+      "type": "reads"
+    },
+    {
+      "from": "comp-postgres",
+      "to": "table-users",
+      "type": "stores"
+    },
+    {
+      "from": "comp-postgres",
+      "to": "table-github-connections",
+      "type": "stores"
+    },
+    {
+      "from": "comp-postgres",
+      "to": "table-repositories",
+      "type": "stores"
+    },
+    {
+      "from": "comp-postgres",
+      "to": "table-devices",
+      "type": "stores"
+    },
+    {
+      "from": "comp-postgres",
+      "to": "table-submissions",
+      "type": "stores"
+    },
+    {
+      "from": "comp-kafka",
+      "to": "topic-submissions",
+      "type": "stores"
+    },
+    {
+      "from": "D-04",
+      "to": "RISK-client-asserted-data",
+      "type": "depends_on"
+    },
+    {
+      "from": "D-17",
+      "to": "RISK-leetcode-changes",
+      "type": "mitigates"
+    },
+    {
+      "from": "D-05",
+      "to": "RISK-missed-submissions",
+      "type": "mitigates"
+    },
+    {
+      "from": "D-06",
+      "to": "RISK-code-in-kafka",
+      "type": "mitigates"
+    },
+    {
+      "from": "D-07",
+      "to": "RISK-retention-vs-outages",
+      "type": "mitigates"
+    },
+    {
+      "from": "D-11",
+      "to": "RISK-github-rate-limits",
+      "type": "mitigates"
+    },
+    {
+      "from": "D-08",
+      "to": "RISK-duplicate-processing",
+      "type": "mitigates"
+    },
+    {
+      "from": "D-13",
+      "to": "RISK-ip-privacy",
+      "type": "mitigates"
+    },
+    {
+      "from": "D-10",
+      "to": "RISK-scope-growth",
+      "type": "mitigates"
+    },
+    {
+      "from": "D-18",
+      "to": "OQ-02",
+      "type": "depends_on"
+    },
+    {
+      "from": "D-19",
+      "to": "OQ-03",
+      "type": "depends_on"
+    },
+    {
+      "from": "D-14",
+      "to": "OQ-04",
+      "type": "depends_on"
+    },
+    {
+      "from": "D-22",
+      "to": "OQ-05",
+      "type": "depends_on"
+    },
+    {
+      "from": "D-16",
+      "to": "OQ-06",
+      "type": "depends_on"
+    },
+    {
+      "from": "OQ-01",
+      "to": "phase-0",
+      "type": "depends_on"
+    }
+  ]
+}

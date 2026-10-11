@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "LeetSync",
+  "version": "1.0.0",
+  "description": "Publishes every accepted LeetCode submission to your GitHub repository.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "http://localhost:8080/*",
+    "http://127.0.0.1:8080/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://leetcode.com/problems/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

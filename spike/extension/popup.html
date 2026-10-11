@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LeetSync Phase 0 Spike</title>
+  <style>
+    body {
+      width: 300px;
+      padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      background: #1e1e24;
+      color: #e0e0e0;
+      margin: 0;
+    }
+    h3 {
+      margin-top: 0;
+      color: #ffa116;
+      border-bottom: 1px solid #333;
+      padding-bottom: 6px;
+    }
+    .badge {
+      background: #2cbb5d;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    p {
+      line-height: 1.4;
+      color: #bbb;
+    }
+    ol {
+      padding-left: 18px;
+      color: #ccc;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    code {
+      background: #2a2a32;
+      padding: 2px 4px;
+      border-radius: 3px;
+      color: #ffa116;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <h3>⚡ LeetSync Capture Spike <span class="badge">Phase 0</span></h3>
+  <p>Tests in-session LeetCode capture and GitHub commits from inside the browser session.</p>
+  
+  <strong>How to run:</strong>
+  <ol>
+    <li>Navigate to any problem on <code>leetcode.com/problems/*</code> while logged into your LeetCode account.</li>
+    <li>Look for the floating <strong>LeetSync Spike Probe</strong> panel at the bottom right.</li>
+    <li>Enter any accepted submission ID (or solve a problem to auto-detect).</li>
+    <li>Click <strong>Fetch (with CSRF)</strong> or <strong>Fetch (no CSRF)</strong> to observe in-session cookie credentials behavior.</li>
+    <li>Optionally enter GitHub test repo details to verify committing code directly.</li>
+  </ol>
+</body>
+</html>

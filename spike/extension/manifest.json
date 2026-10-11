@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "LeetSync Phase 0 Capture Spike",
+  "version": "0.1.0",
+  "description": "Phase 0 Spike: In-session LeetCode submission capture & GitHub commit test",
+  "permissions": [
+    "storage",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "https://api.github.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://leetcode.com/problems/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
