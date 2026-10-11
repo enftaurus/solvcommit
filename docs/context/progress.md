@@ -6,9 +6,9 @@
 See [`docs/PRD.md#phases-mvp-and-acceptance`](file:///home/rajababu/intern/leetsync/docs/PRD.md#phases-mvp-and-acceptance) for phase exit criteria.
 
 ## Current Status
-- **Current Phase**: Phase 6 (Reliability & Release Readiness)
-- **Status**: Phase 5 (Dashboard & Cross-Browser Extension) complete. Built lightweight, high-quality light-theme React dashboard with zero AI-slop, including Overview, Submissions Table with status filtering & retry actions, Repository connection & branch selector, Sessions Manager with device revocation & pair modal, Account Settings with sync pause/resume & guides. Firefox Manifest V3 support added alongside Chrome with automated unit test suite.
-- **Blocked**: None.
+- **Current Phase**: Phase 6 (Reliability & Release Readiness - Complete). All MVP Phases Complete.
+- **Status**: Phase 6 (Reliability & Release Readiness) verified. Automated concurrency stress tests pass (per-repo commit serialization without race conditions), token rotation breach detection revokes token families, security audit confirms code absence from PostgreSQL schema, account hard-deletion cascade verified, and deployment/operations runbooks documented in `docs/OPERATIONS.md`.
+- **Blocked**: None. Project is release-ready.
 
 ## Phase Checklist
 - [x] **Setup & Context**: Steps 1 to 3 documentation, decision seeding, knowledge graph.
@@ -18,7 +18,7 @@ See [`docs/PRD.md#phases-mvp-and-acceptance`](file:///home/rajababu/intern/leets
 - [x] **Phase 3: Ingestion Pipeline**: Ingestion endpoint, schema validation, Kafka producer (`acks=all`), offline extension queue, backfill.
 - [x] **Phase 4: GitHub Publishing**: Safe file layout (`submission-<id>.<ext>`), serialized repo commits, idempotent retry.
 - [x] **Phase 5: Dashboard & Cross-Browser Extension**: Lightweight React + Vite UI (light theme, low RAM, zero AI slop), cross-browser Chrome & Firefox MV3 support, repo selector, session manager, retry controls.
-- [ ] **Phase 6: Reliability & Release Readiness**: Concurrency stress tests, failure recovery, security audit, deployment documentation.
+- [x] **Phase 6: Reliability & Release Readiness**: Concurrency stress tests, failure recovery, security audit, deployment documentation.
 
 ## Ponytail Shortcuts
 1. `ponytail: dropped submissions.dlq topic` - Failed status recorded directly in PostgreSQL row; recovery is extension resend (D-20).

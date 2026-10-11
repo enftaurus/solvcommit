@@ -1,7 +1,7 @@
 # Knowledge Graph
 
 > Visual traceability graph connecting decisions, requirements, components, and phases.
-> Last updated: Phase 5 (Dashboard & Cross-Browser Extension)
+> Last updated: Phase 6 (Reliability & Release Readiness)
 
 Source definition: [`graph/knowledge-graph.json`](file:///home/rajababu/intern/leetsync/graph/knowledge-graph.json)
 

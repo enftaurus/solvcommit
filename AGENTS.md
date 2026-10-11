@@ -30,4 +30,4 @@ LeetSync is a Chrome extension (Manifest V3) and Go backend that publishes every
 - `./dev.sh reset`: The only destructive command; resets database volumes and topics.
 
 ## Current Phase
-- **Phase 5**: Dashboard & Cross-Browser Extension (Complete). Next: **Phase 6** (Reliability & Release Readiness).
+- **Phase 6**: Reliability & Release Readiness (Complete). All MVP Phases Complete & Release Ready.
