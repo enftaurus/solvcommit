@@ -1,7 +1,7 @@
 # Knowledge Graph
 
 > Visual traceability graph connecting decisions, requirements, components, and phases.
-> Last updated: Phase 4 (GitHub Publishing)
+> Last updated: Phase 5 (Dashboard & Cross-Browser Extension)
 
 Source definition: [`graph/knowledge-graph.json`](file:///home/rajababu/intern/leetsync/graph/knowledge-graph.json)
 
@@ -14,7 +14,7 @@ flowchart TD
     phase_4["Phase 4: GitHub Publishing (Phase)"]
     phase_5["Phase 5: Dashboard (Phase)"]
     phase_6["Phase 6: Reliability & Release Readiness (Phase)"]
-    comp_extension["Chrome Extension (Component)"]
+    comp_extension["Chrome & Firefox Extension (Component)"]
     comp_web["Web Dashboard (Component)"]
     comp_api["Go API (Component)"]
     comp_publisher["Go Publisher (Component)"]

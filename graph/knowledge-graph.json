@@ -45,7 +45,7 @@
     {
       "id": "comp-extension",
       "type": "Component",
-      "label": "Chrome Extension",
+      "label": "Chrome & Firefox Extension",
       "source": "docs/PRD.md#architecture"
     },
     {

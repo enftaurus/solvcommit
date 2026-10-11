@@ -3,6 +3,7 @@
 *.env
 *.env.*
 *.secret
+digest.txt
 
 # Binaries and builds
 bin/

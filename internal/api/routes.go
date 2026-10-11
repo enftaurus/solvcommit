@@ -6,6 +6,9 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,10 +47,15 @@ type DeviceManager interface {
 	ValidateDeviceActive(ctx context.Context, deviceID string) error
 }
 
-// SubmissionManager interface for ingestion & backfill operations (Phase 3)
+// SubmissionManager interface for ingestion & sync dashboard operations (Phase 3 & Phase 5)
 type SubmissionManager interface {
 	Ingest(ctx context.Context, userID, deviceID string, req *submissions.IngestionRequest) (*submissions.IngestionResult, error)
 	FindMissingSubmissions(ctx context.Context, userID string, requestedIDs []string) (*submissions.BackfillResponse, error)
+	GetSyncStatus(ctx context.Context, userID string) (*submissions.SyncStatusResponse, error)
+	ListSubmissions(ctx context.Context, userID string, limit, offset int) (*submissions.SubmissionsListResponse, error)
+	RetrySubmission(ctx context.Context, userID, subID string) error
+	PauseSync(ctx context.Context, userID string) error
+	ResumeSync(ctx context.Context, userID string) error
 }
 
 // RepositoryManager interface for destination repository management (Phase 4)
@@ -100,9 +108,32 @@ func NewRouter(h *Handler) http.Handler {
 	mux.HandleFunc("PUT /api/v1/repositories/selected", h.requireUserSession(h.handleUpdateSelectedRepository))
 	mux.HandleFunc("POST /api/v1/repositories/verify", h.requireUserSession(h.handleVerifyRepository))
 
-	// Synchronization & Ingestion (Phase 3: Extension Ingestion Pipeline)
+	// Synchronization & Ingestion (Phase 3 & Phase 5)
 	mux.HandleFunc("POST /api/v1/sync/submissions", h.RequireDeviceToken(h.handleSyncSubmissions))
 	mux.HandleFunc("POST /api/v1/sync/backfill", h.RequireDeviceToken(h.handleSyncBackfill))
+	mux.HandleFunc("GET /api/v1/sync/status", h.requireUserSession(h.handleSyncStatus))
+	mux.HandleFunc("GET /api/v1/sync/submissions", h.requireUserSession(h.handleListSubmissions))
+	mux.HandleFunc("POST /api/v1/sync/submissions/{id}/retry", h.requireUserSession(h.handleRetrySubmission))
+	mux.HandleFunc("POST /api/v1/sync/pause", h.requireUserSession(h.handlePauseSync))
+	mux.HandleFunc("POST /api/v1/sync/resume", h.requireUserSession(h.handleResumeSync))
+
+	// Web Dashboard Static Files & SPA fallback (Phase 5)
+	if _, err := os.Stat("web/dist"); err == nil {
+		fs := http.FileServer(http.Dir("web/dist"))
+		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				http.NotFound(w, r)
+				return
+			}
+			cleanPath := filepath.Clean(r.URL.Path)
+			fpath := filepath.Join("web/dist", cleanPath)
+			if info, err := os.Stat(fpath); err == nil && !info.IsDir() {
+				fs.ServeHTTP(w, r)
+				return
+			}
+			http.ServeFile(w, r, "web/dist/index.html")
+		})
+	}
 
 	return mux
 }
@@ -577,6 +608,96 @@ func (h *Handler) handleSyncBackfill(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(res)
+}
+
+func (h *Handler) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
+	if h.Submissions == nil {
+		http.Error(w, "submission service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	userID := r.Context().Value(userIDKey).(string)
+
+	status, err := h.Submissions.GetSyncStatus(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(status)
+}
+
+func (h *Handler) handleListSubmissions(w http.ResponseWriter, r *http.Request) {
+	if h.Submissions == nil {
+		http.Error(w, "submission service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	userID := r.Context().Value(userIDKey).(string)
+
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+
+	list, err := h.Submissions.ListSubmissions(r.Context(), userID, limit, offset)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(list)
+}
+
+func (h *Handler) handleRetrySubmission(w http.ResponseWriter, r *http.Request) {
+	if h.Submissions == nil {
+		http.Error(w, "submission service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	userID := r.Context().Value(userIDKey).(string)
+	subID := r.PathValue("id")
+	if subID == "" {
+		http.Error(w, "missing submission id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Submissions.RetrySubmission(r.Context(), userID, subID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "queued", "id": subID})
+}
+
+func (h *Handler) handlePauseSync(w http.ResponseWriter, r *http.Request) {
+	if h.Submissions == nil {
+		http.Error(w, "submission service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	userID := r.Context().Value(userIDKey).(string)
+
+	if err := h.Submissions.PauseSync(r.Context(), userID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"status": "paused", "is_paused": true})
+}
+
+func (h *Handler) handleResumeSync(w http.ResponseWriter, r *http.Request) {
+	if h.Submissions == nil {
+		http.Error(w, "submission service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	userID := r.Context().Value(userIDKey).(string)
+
+	if err := h.Submissions.ResumeSync(r.Context(), userID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"status": "active", "is_paused": false})
 }
 
 // Middleware: Require Web Session (FR-AUTH-03)

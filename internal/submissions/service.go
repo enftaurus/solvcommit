@@ -182,6 +182,137 @@ func (s *Service) FindMissingSubmissions(ctx context.Context, userID string, req
 	return &BackfillResponse{MissingSubmissionIDs: missing}, nil
 }
 
+// GetSyncStatus retrieves aggregated pipeline counts (FR-DASH-03, D-09)
+func (s *Service) GetSyncStatus(ctx context.Context, userID string) (*SyncStatusResponse, error) {
+	queryCounts := `
+		SELECT status, COUNT(*)
+		FROM submissions
+		WHERE user_id = $1
+		GROUP BY status;
+	`
+	rows, err := s.pool.Query(ctx, queryCounts, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query sync counts: %w", err)
+	}
+	defer rows.Close()
+
+	res := &SyncStatusResponse{}
+	for rows.Next() {
+		var st string
+		var cnt int
+		if err := rows.Scan(&st, &cnt); err == nil {
+			switch st {
+			case "queued":
+				res.Queued = cnt
+			case "processing":
+				res.Processing = cnt
+			case "retrying":
+				res.Retrying = cnt
+			case "published":
+				res.Published = cnt
+			case "failed":
+				res.Failed = cnt
+			case "expired":
+				res.Expired = cnt
+			}
+			res.Total += cnt
+		}
+	}
+
+	// Check pause state
+	var userStatus string
+	_ = s.pool.QueryRow(ctx, "SELECT status FROM users WHERE id = $1;", userID).Scan(&userStatus)
+	res.IsPaused = (userStatus == "paused")
+
+	return res, nil
+}
+
+// ListSubmissions returns a paginated list of submission metadata for dashboard
+func (s *Service) ListSubmissions(ctx context.Context, userID string, limit, offset int) (*SubmissionsListResponse, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	var total int
+	err := s.pool.QueryRow(ctx, "SELECT COUNT(*) FROM submissions WHERE user_id = $1;", userID).Scan(&total)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count submissions: %w", err)
+	}
+
+	query := `
+		SELECT id, user_id, leetcode_submission_id, problem_slug, problem_title,
+		       language, status, content_sha256, github_path, commit_sha,
+		       attempt_count, next_attempt_at, last_error_code, received_at, published_at
+		FROM submissions
+		WHERE user_id = $1
+		ORDER BY received_at DESC
+		LIMIT $2 OFFSET $3;
+	`
+	rows, err := s.pool.Query(ctx, query, userID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list submissions: %w", err)
+	}
+	defer rows.Close()
+
+	var list []SubmissionRow
+	for rows.Next() {
+		var r SubmissionRow
+		err := rows.Scan(
+			&r.ID, &r.UserID, &r.LeetCodeSubmissionID, &r.ProblemSlug, &r.ProblemTitle,
+			&r.Language, &r.Status, &r.ContentSHA256, &r.GitHubPath, &r.CommitSHA,
+			&r.AttemptCount, &r.NextAttemptAt, &r.LastError, &r.ReceivedAt, &r.PublishedAt,
+		)
+		if err == nil {
+			list = append(list, r)
+		}
+	}
+	if list == nil {
+		list = []SubmissionRow{}
+	}
+
+	return &SubmissionsListResponse{
+		Submissions: list,
+		Total:       total,
+		Limit:       limit,
+		Offset:      offset,
+	}, nil
+}
+
+// RetrySubmission re-queues a failed or expired submission for retry (FR-DASH-02, D-07)
+func (s *Service) RetrySubmission(ctx context.Context, userID, subID string) error {
+	query := `
+		UPDATE submissions
+		SET status = 'queued', attempt_count = 0, next_attempt_at = NULL, last_error_code = NULL
+		WHERE user_id = $1 AND (id::text = $2 OR leetcode_submission_id::text = $2) AND status IN ('failed', 'expired', 'retrying');
+	`
+	cmd, err := s.pool.Exec(ctx, query, userID, subID)
+	if err != nil {
+		return fmt.Errorf("failed to retry submission: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return errors.New("submission not found or not in retryable state")
+	}
+	return nil
+}
+
+// PauseSync pauses syncing for the user (FR-DASH-01)
+func (s *Service) PauseSync(ctx context.Context, userID string) error {
+	_, err := s.pool.Exec(ctx, "UPDATE users SET status = 'paused', updated_at = NOW() WHERE id = $1;", userID)
+	return err
+}
+
+// ResumeSync resumes syncing for the user (FR-DASH-01)
+func (s *Service) ResumeSync(ctx context.Context, userID string) error {
+	_, err := s.pool.Exec(ctx, "UPDATE users SET status = 'active', updated_at = NOW() WHERE id = $1;", userID)
+	return err
+}
+
 func sha256Hex(s string) string {
 	sum := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(sum[:])

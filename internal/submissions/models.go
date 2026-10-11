@@ -90,3 +90,23 @@ type SubmissionRow struct {
 	ReceivedAt           time.Time  `json:"received_at"`
 	PublishedAt          *time.Time `json:"published_at,omitempty"`
 }
+
+// SyncStatusResponse represents aggregated pipeline counts for dashboard (FR-DASH-03, D-09)
+type SyncStatusResponse struct {
+	Queued     int  `json:"queued"`
+	Processing int  `json:"processing"`
+	Retrying   int  `json:"retrying"`
+	Published  int  `json:"published"`
+	Failed     int  `json:"failed"`
+	Expired    int  `json:"expired"`
+	Total      int  `json:"total"`
+	IsPaused   bool `json:"is_paused"`
+}
+
+// SubmissionsListResponse represents paginated metadata for dashboard table
+type SubmissionsListResponse struct {
+	Submissions []SubmissionRow `json:"submissions"`
+	Total       int             `json:"total"`
+	Limit       int             `json:"limit"`
+	Offset      int             `json:"offset"`
+}

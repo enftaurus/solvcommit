@@ -130,6 +130,31 @@ func (m *mockSubmissionManager) FindMissingSubmissions(ctx context.Context, user
 	return &submissions.BackfillResponse{MissingSubmissionIDs: requestedIDs}, nil
 }
 
+func (m *mockSubmissionManager) GetSyncStatus(ctx context.Context, userID string) (*submissions.SyncStatusResponse, error) {
+	return &submissions.SyncStatusResponse{Published: 5, Queued: 1, Total: 6}, nil
+}
+
+func (m *mockSubmissionManager) ListSubmissions(ctx context.Context, userID string, limit, offset int) (*submissions.SubmissionsListResponse, error) {
+	return &submissions.SubmissionsListResponse{
+		Submissions: []submissions.SubmissionRow{
+			{ID: "sub-1", ProblemSlug: "two-sum", ProblemTitle: "Two Sum", Language: "python3", Status: "published"},
+		},
+		Total: 1,
+	}, nil
+}
+
+func (m *mockSubmissionManager) RetrySubmission(ctx context.Context, userID, subID string) error {
+	return nil
+}
+
+func (m *mockSubmissionManager) PauseSync(ctx context.Context, userID string) error {
+	return nil
+}
+
+func (m *mockSubmissionManager) ResumeSync(ctx context.Context, userID string) error {
+	return nil
+}
+
 type mockRepositoryManager struct {
 	listFunc   func(ctx context.Context, userID string) ([]github.RepositoryInfo, error)
 	selectFunc func(ctx context.Context, userID string, req *repositories.SelectRepoRequest) (*repositories.Repository, error)
@@ -673,5 +698,90 @@ func TestRepositoryEndpoints(t *testing.T) {
 	router.ServeHTTP(verRec, verReq)
 	if verRec.Code != http.StatusOK {
 		t.Fatalf("expected 200 on verify repo, got %d", verRec.Code)
+	}
+}
+
+func TestSyncDashboardEndpoints(t *testing.T) {
+	mockSubs := &mockSubmissionManager{}
+	h := &api.Handler{
+		Submissions:   mockSubs,
+		SessionSecret: testSecret(),
+	}
+	router := api.NewRouter(h)
+
+	sessionVal, _ := auth.MintSessionCookie(testSecret(), "user-1", 1*time.Hour)
+
+	// 1. Get sync status
+	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/sync/status", nil)
+	statusReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	statusRec := httptest.NewRecorder()
+	router.ServeHTTP(statusRec, statusReq)
+	if statusRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on sync status, got %d", statusRec.Code)
+	}
+	var st submissions.SyncStatusResponse
+	_ = json.Unmarshal(statusRec.Body.Bytes(), &st)
+	if st.Published != 5 || st.Total != 6 {
+		t.Errorf("unexpected sync status: %+v", st)
+	}
+
+	// 2. List submissions
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/sync/submissions?limit=10&offset=0", nil)
+	listReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	listRec := httptest.NewRecorder()
+	router.ServeHTTP(listRec, listReq)
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on list submissions, got %d", listRec.Code)
+	}
+
+	// 3. Retry submission
+	retryReq := httptest.NewRequest(http.MethodPost, "/api/v1/sync/submissions/sub-1/retry", nil)
+	retryReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	retryRec := httptest.NewRecorder()
+	router.ServeHTTP(retryRec, retryReq)
+	if retryRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on retry submission, got %d", retryRec.Code)
+	}
+
+	// 4. Pause sync
+	pauseReq := httptest.NewRequest(http.MethodPost, "/api/v1/sync/pause", nil)
+	pauseReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	pauseRec := httptest.NewRecorder()
+	router.ServeHTTP(pauseRec, pauseReq)
+	if pauseRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on pause sync, got %d", pauseRec.Code)
+	}
+
+	// 5. Resume sync
+	resumeReq := httptest.NewRequest(http.MethodPost, "/api/v1/sync/resume", nil)
+	resumeReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	resumeRec := httptest.NewRecorder()
+	router.ServeHTTP(resumeRec, resumeReq)
+	if resumeRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on resume sync, got %d", resumeRec.Code)
+	}
+}
+
+func TestSPAFallback(t *testing.T) {
+	handler := &api.Handler{
+		SessionSecret: []byte("test-secret-at-least-32-bytes-long!"),
+		AppEnv:        "test",
+	}
+	router := api.NewRouter(handler)
+
+	// Testing GET / should respond with 200 (if web/dist built) or 404
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK && rec.Code != http.StatusNotFound {
+		t.Errorf("unexpected status code for SPA root: %d", rec.Code)
+	}
+
+	// Unknown /api/ path should return 404
+	apiReq := httptest.NewRequest(http.MethodGet, "/api/v1/unknown-endpoint", nil)
+	apiRec := httptest.NewRecorder()
+	router.ServeHTTP(apiRec, apiReq)
+	if apiRec.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for unknown api endpoint, got %d", apiRec.Code)
 	}
 }

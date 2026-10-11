@@ -76,6 +76,12 @@ start_infra() {
 build_binaries() {
   echo "Building Go binaries..."
   mkdir -p bin
+  if [ -d "web" ] && command -v npm >/dev/null 2>&1; then
+    if [ ! -d "web/dist" ] || [ "web/src" -nt "web/dist" ]; then
+      echo "Building web dashboard assets..."
+      (cd web && npm run build)
+    fi
+  fi
   go build -o bin/api ./cmd/api
   go build -o bin/publisher ./cmd/publisher
   echo "Build complete."

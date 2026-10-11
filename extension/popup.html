@@ -5,7 +5,7 @@
   <title>LeetSync</title>
   <style>
     body {
-      width: 280px;
+      width: 300px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 16px;
@@ -21,7 +21,7 @@
       margin-bottom: 12px;
     }
     .title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       color: #38bdf8;
     }
@@ -41,13 +41,54 @@
     }
     .stat-label { color: #94a3b8; }
     .stat-val { font-weight: 500; }
-    .footer {
-      margin-top: 14px;
+    .pair-section {
+      margin-top: 12px;
       padding-top: 10px;
       border-top: 1px solid #1e293b;
-      text-align: center;
     }
-    button {
+    .pair-toggle-btn {
+      background: #334155;
+      color: #e2e8f0;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    .pair-toggle-btn:hover { background: #475569; }
+    .pair-form {
+      display: none;
+      margin-top: 8px;
+    }
+    .pair-input {
+      width: 100%;
+      box-sizing: border-box;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      padding: 8px;
+      font-size: 11px;
+      font-family: monospace;
+      border-radius: 4px;
+      resize: vertical;
+      height: 60px;
+      margin-bottom: 6px;
+    }
+    .pair-input:focus {
+      outline: none;
+      border-color: #38bdf8;
+    }
+    .footer {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    button.btn-primary {
       background: #2563eb;
       color: white;
       border: none;
@@ -57,7 +98,24 @@
       cursor: pointer;
       width: 100%;
     }
-    button:hover { background: #1d4ed8; }
+    button.btn-primary:hover { background: #1d4ed8; }
+    button.btn-secondary {
+      background: transparent;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button.btn-secondary:hover { color: #f8fafc; background: #1e293b; }
+    .pair-error {
+      color: #f87171;
+      font-size: 11px;
+      margin-top: 4px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -79,8 +137,17 @@
     <span id="healthVal" class="stat-val">Probing...</span>
   </div>
 
+  <div id="pairContainer" class="pair-section">
+    <button id="togglePairBtn" class="pair-toggle-btn">Pair With Dashboard</button>
+    <div id="pairForm" class="pair-form">
+      <textarea id="pairInput" class="pair-input" placeholder="Paste pairing JSON code from dashboard"></textarea>
+      <button id="submitPairBtn" class="btn-primary" style="font-size: 11px; padding: 5px;">Connect</button>
+      <div id="pairError" class="pair-error"></div>
+    </div>
+  </div>
+
   <div class="footer">
-    <button id="openDashboardBtn">Open Dashboard</button>
+    <button id="openDashboardBtn" class="btn-secondary">Open Dashboard</button>
   </div>
 
   <script src="popup.js"></script>

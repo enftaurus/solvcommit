@@ -6,8 +6,8 @@
 See [`docs/PRD.md#phases-mvp-and-acceptance`](file:///home/rajababu/intern/leetsync/docs/PRD.md#phases-mvp-and-acceptance) for phase exit criteria.
 
 ## Current Status
-- **Current Phase**: Phase 5 (Dashboard)
-- **Status**: Phase 4 GitHub Publishing completed and verified. GitHub App client with ephemeral token caching, repository selection with non-destructive README handling, publisher worker with per-repo commit serialization, ambiguous write recovery, and path conflict protection all pass automated tests.
+- **Current Phase**: Phase 6 (Reliability & Release Readiness)
+- **Status**: Phase 5 (Dashboard & Cross-Browser Extension) complete. Built lightweight, high-quality light-theme React dashboard with zero AI-slop, including Overview, Submissions Table with status filtering & retry actions, Repository connection & branch selector, Sessions Manager with device revocation & pair modal, Account Settings with sync pause/resume & guides. Firefox Manifest V3 support added alongside Chrome with automated unit test suite.
 - **Blocked**: None.
 
 ## Phase Checklist
@@ -17,7 +17,7 @@ See [`docs/PRD.md#phases-mvp-and-acceptance`](file:///home/rajababu/intern/leets
 - [x] **Phase 2: Identity & Sessions**: GitHub App, device pairing, rotating refresh tokens with reuse detection, IP recording.
 - [x] **Phase 3: Ingestion Pipeline**: Ingestion endpoint, schema validation, Kafka producer (`acks=all`), offline extension queue, backfill.
 - [x] **Phase 4: GitHub Publishing**: Safe file layout (`submission-<id>.<ext>`), serialized repo commits, idempotent retry.
-- [ ] **Phase 5: Dashboard**: React + Vite UI, repository selection, device sessions, sync history, retry/resend controls.
+- [x] **Phase 5: Dashboard & Cross-Browser Extension**: Lightweight React + Vite UI (light theme, low RAM, zero AI slop), cross-browser Chrome & Firefox MV3 support, repo selector, session manager, retry controls.
 - [ ] **Phase 6: Reliability & Release Readiness**: Concurrency stress tests, failure recovery, security audit, deployment documentation.
 
 ## Ponytail Shortcuts
