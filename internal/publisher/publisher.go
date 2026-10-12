@@ -171,8 +171,50 @@ func (w *Worker) ProcessSubmission(ctx context.Context, msg *submissions.KafkaSu
 		}
 	}
 
-	// 7. Update status to 'published' (D-09)
+	// 7. Maintain SolvCommit section and badges in README.md
+	w.ensureReadmeBadge(ctx, instID, repoOwner, repoName, defaultBranch, msg)
+
+	// 8. Update status to 'published' (D-09)
 	return w.recordSuccess(ctx, msg.UserID, subIDInt, targetPath, commitRes.CommitSHA)
+}
+
+func (w *Worker) ensureReadmeBadge(ctx context.Context, instID int64, owner, repo, branch string, msg *submissions.KafkaSubmissionMessage) {
+	const markerStart = "<!-- SOLVCOMMIT_START -->"
+	const markerEnd = "<!-- SOLVCOMMIT_END -->"
+
+	var count int
+	_ = w.pool.QueryRow(ctx, "SELECT COUNT(*) FROM submissions WHERE user_id = $1 AND status = 'published';", msg.UserID).Scan(&count)
+	count++ // Count current one
+
+	solvcommitSection := fmt.Sprintf(`%s
+---
+### ⚡ Automated with [SolvCommit](https://github.com/enftaurus/solvcommit)
+- **Latest Synced**: [%s](%s) (%s)
+- **Solutions Synced**: %d
+
+> *Continuous LeetCode publishing powered by SolvCommit.*
+%s`, markerStart, msg.ProblemTitle, msg.ProblemSlug, msg.Language, count, markerEnd)
+
+	existing, err := w.github.GetFile(ctx, instID, owner, repo, "README.md")
+	if errors.Is(err, github.ErrFileNotFound) || existing == nil {
+		initial := fmt.Sprintf("# %s\n\nPersonal LeetCode solutions repository.\n\n%s\n", repo, solvcommitSection)
+		_, _ = w.github.PutFile(ctx, instID, owner, repo, "README.md", initial, "chore: initialize README with SolvCommit badge", branch)
+		return
+	}
+
+	content := existing.Content
+	var newContent string
+	if strings.Contains(content, markerStart) && strings.Contains(content, markerEnd) {
+		startIdx := strings.Index(content, markerStart)
+		endIdx := strings.Index(content, markerEnd) + len(markerEnd)
+		newContent = content[:startIdx] + solvcommitSection + content[endIdx:]
+	} else {
+		newContent = strings.TrimRight(content, "\n\r ") + "\n\n" + solvcommitSection + "\n"
+	}
+
+	if newContent != content {
+		_, _ = w.github.PutFile(ctx, instID, owner, repo, "README.md", newContent, "docs: update SolvCommit sync badge in README", branch)
+	}
 }
 
 func (w *Worker) markFailed(ctx context.Context, msg *submissions.KafkaSubmissionMessage, code string) {
