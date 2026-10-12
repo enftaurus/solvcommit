@@ -101,11 +101,16 @@ async function fetchSubmissionDetails(submissionId) {
 }
 
 async function waitForFinalDetails(id) {
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 20; i++) {
     try {
       const d = await fetchSubmissionDetails(id);
-      if (d && d.statusDisplay && d.code && !/pending|judging|started/i.test(d.statusDisplay)) {
-        return d;
+      if (d) {
+        console.log(`[LeetSync] Poll attempt ${i + 1}: statusDisplay="${d.statusDisplay}", statusCode=${d.statusCode}, hasCode=${!!d.code}`);
+        // If still judging, queued, started, or temporary internal error during early judge spinup
+        const isJudging = !d.code || !d.statusDisplay || /pending|judging|started|internal error/i.test(d.statusDisplay);
+        if (!isJudging) {
+          return d;
+        }
       }
     } catch (e) {
       console.warn("[LeetSync] Polling submission details attempt failed:", e.message);
@@ -124,9 +129,20 @@ async function handleSubmissionCaptured(submissionId) {
       return;
     }
 
+    console.log("[LeetSync] Final submission details received:", {
+      statusDisplay: details.statusDisplay,
+      statusCode: details.statusCode,
+      lang: details.lang?.name,
+      slug: details.question?.titleSlug
+    });
+
+    const isAccepted =
+      (typeof details.statusDisplay === "string" && details.statusDisplay.trim().toLowerCase() === "accepted") ||
+      details.statusCode === 10;
+
     // Strict Rule: Only Accepted submissions (D-10)
-    if (details.statusDisplay !== "Accepted") {
-      console.log("[LeetSync] Submission is not accepted (status:", details.statusDisplay, "). Skipping.");
+    if (!isAccepted) {
+      console.log("[LeetSync] Submission is not accepted (status:", details.statusDisplay, "code:", details.statusCode, "). Skipping.");
       return;
     }
 
