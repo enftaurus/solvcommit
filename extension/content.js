@@ -4,6 +4,36 @@
 
 console.log("[LeetSync] Content script active on", window.location.pathname);
 
+// Inject main-world interceptor directly into page DOM (ensures execution in Firefox & Chrome)
+(() => {
+  const script = document.createElement("script");
+  script.textContent = `
+    (() => {
+      const origFetch = window.fetch;
+      window.fetch = async function (...args) {
+        const res = await origFetch.apply(this, args);
+        try {
+          const input = args[0];
+          const urlStr = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+          if (urlStr.includes('/submit')) {
+            res.clone().json().then((d) => {
+              if (d && (d.submission_id || d.submissionId)) {
+                const subId = String(d.submission_id || d.submissionId);
+                console.log('[LeetSync] Detected submit response, submission_id:', subId);
+                window.postMessage({ type: 'LEETSYNC_SUBMISSION_DETECTED', submissionId: subId }, '*');
+              }
+            }).catch(() => {});
+          }
+        } catch (_) {}
+        return res;
+      };
+      console.log('[LeetSync] Page submit fetch hook installed successfully.');
+    })();
+  `;
+  (document.head || document.documentElement).appendChild(script);
+  script.remove();
+})();
+
 const SUBMISSION_DETAILS_QUERY = `
 query submissionDetails($submissionId: Int!) {
   submissionDetails(submissionId: $submissionId) {
@@ -147,8 +177,8 @@ function extractProblemSlugFromUrl() {
 
 // Listen for custom dispatch or DOM submission responses
 window.addEventListener("message", (event) => {
-  if (event.source !== window) return;
-  if (event.data && event.data.type === "LEETSYNC_SUBMISSION_DETECTED") {
+  if (event.data && event.data.type === "LEETSYNC_SUBMISSION_DETECTED" && event.data.submissionId) {
+    console.log("[LeetSync] Message received in content script:", event.data.submissionId);
     handleSubmissionCaptured(event.data.submissionId);
   }
 });

@@ -37,12 +37,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Probe backend liveness
   try {
-    const probe = await fetch("http://localhost:8080/api/v1/health/live");
-    if (probe.ok) {
+    let probe = await fetch("http://localhost:8080/api/v1/health/live").catch(() => null);
+    if (!probe || !probe.ok) {
+      probe = await fetch("http://127.0.0.1:8080/api/v1/health/live").catch(() => null);
+    }
+    if (probe && probe.ok) {
       healthVal.textContent = "Online";
       healthVal.style.color = "#34d399";
     } else {
-      healthVal.textContent = "Error (" + probe.status + ")";
+      healthVal.textContent = "Offline";
       healthVal.style.color = "#f87171";
     }
   } catch (e) {
