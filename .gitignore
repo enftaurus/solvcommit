@@ -2,7 +2,10 @@
 .env
 *.env
 *.env.*
+!.env.example
 *.secret
+*.pem
+github-app.pem
 digest.txt
 
 # Binaries and builds

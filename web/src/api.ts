@@ -62,6 +62,11 @@ export const api = {
       body: JSON.stringify({ default_branch: defaultBranch }),
     }),
   verifyRepo: () => request<{ status: string }>("/api/v1/repositories/verify", { method: "POST" }),
+  createDefaultRepo: (name = "solvcommit-leetcode") =>
+    request<Repository>("/api/v1/repositories/create-default", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
 
   // Devices & Sessions
   listDevices: () => request<Device[]>("/api/v1/devices"),

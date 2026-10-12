@@ -29,24 +29,57 @@ extAPI.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
+let refreshing = null;
+
+async function refreshAccessToken() {
+  const { device_id, refresh_token } = await storageAdapter.get(['device_id', 'refresh_token']);
+  if (!device_id || !refresh_token) throw new Error('not paired');
+  const res = await fetch(`${API_BASE_URL}/api/v1/devices/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id, refresh_token })
+  });
+  if (res.status === 401 || res.status === 403) {
+    await storageAdapter.set({ access_token: null, refresh_token: null }); // revoked: show Unpaired
+    throw new Error('device revoked');
+  }
+  if (!res.ok) throw new Error(`refresh failed (${res.status})`);
+  const d = await res.json();
+  await storageAdapter.set({ access_token: d.access_token, refresh_token: d.refresh_token });
+  return d.access_token;
+}
+
+function refreshOnce() {
+  refreshing = refreshing || refreshAccessToken().finally(() => { refreshing = null; });
+  return refreshing;
+}
+
+async function authedFetch(url, init = {}) {
+  const send = async () => {
+    const { access_token } = await storageAdapter.get(['access_token']);
+    if (!access_token) throw new Error('Device is not paired');
+    return fetch(url, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...init.headers,
+        Authorization: `Bearer ${access_token}`
+      }
+    });
+  };
+  let res = await send();
+  if (res.status === 401) {
+    await refreshOnce();
+    res = await send();
+  }
+  return res;
+}
+
 // LeetSync API Client
 const apiClient = {
-  async getAuthHeaders() {
-    const data = await storageAdapter.get(["access_token", "device_id"]);
-    if (!data.access_token) {
-      throw new Error("Device is not paired; missing access token");
-    }
-    return {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${data.access_token}`
-    };
-  },
-
   async submit(item) {
-    const headers = await this.getAuthHeaders();
-    const res = await fetch(`${API_BASE_URL}/api/v1/sync/submissions`, {
+    const res = await authedFetch(`${API_BASE_URL}/api/v1/sync/submissions`, {
       method: "POST",
-      headers,
       body: JSON.stringify({
         submission_id: String(item.submission_id),
         problem_slug: item.problem_slug,
@@ -65,15 +98,15 @@ const apiClient = {
     const text = await res.text();
     const err = new Error(`API submission failed (${res.status}): ${text}`);
     err.status = res.status;
-    err.isPermanent = (res.status === 422 || res.status === 400);
+    // Issue 19: Only 400 (malformed) and 422 (unprocessable) are permanent client rejects.
+    // 401/403 are handled by refresh/reauth; 5xx and 429 are transient.
+    err.isPermanent = (res.status === 400 || res.status === 422);
     throw err;
   },
 
   async getMissingSubmissions(submissionIDs) {
-    const headers = await this.getAuthHeaders();
-    const res = await fetch(`${API_BASE_URL}/api/v1/sync/backfill`, {
+    const res = await authedFetch(`${API_BASE_URL}/api/v1/sync/backfill`, {
       method: "POST",
-      headers,
       body: JSON.stringify({ submission_ids: submissionIDs.map(String) })
     });
 

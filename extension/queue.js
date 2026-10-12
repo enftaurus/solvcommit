@@ -7,6 +7,13 @@ class OfflineQueue {
   constructor(storage) {
     this.storage = storage;
     this.storageKey = "leetsync_offline_queue";
+    this._lock = Promise.resolve();
+  }
+
+  _withLock(fn) {
+    const next = this._lock.then(fn, fn);
+    this._lock = next.catch(() => {});
+    return next;
   }
 
   async getItems() {
@@ -22,44 +29,48 @@ class OfflineQueue {
    * Enqueue an accepted submission to the offline buffer (FR-EXT-05)
    */
   async enqueue(submission) {
-    if (!submission || !submission.submission_id) {
-      throw new Error("Invalid submission item");
-    }
+    return this._withLock(async () => {
+      if (!submission || !submission.submission_id) {
+        throw new Error("Invalid submission item");
+      }
 
-    // Only accepted submissions can be queued (D-10)
-    if (submission.status !== "Accepted") {
-      throw new Error("Only accepted submissions can be enqueued");
-    }
+      // Only accepted submissions can be queued (D-10)
+      if (submission.status !== "Accepted") {
+        throw new Error("Only accepted submissions can be enqueued");
+      }
 
-    const items = await this.getItems();
-    const existingIndex = items.findIndex(i => String(i.submission_id) === String(submission.submission_id));
+      const items = await this.getItems();
+      const existingIndex = items.findIndex(i => String(i.submission_id) === String(submission.submission_id));
 
-    const item = {
-      ...submission,
-      submission_id: String(submission.submission_id),
-      attempts: 0,
-      next_attempt_at: 0,
-      queued_at: new Date().toISOString()
-    };
+      const item = {
+        ...submission,
+        submission_id: String(submission.submission_id),
+        attempts: 0,
+        next_attempt_at: 0,
+        queued_at: new Date().toISOString()
+      };
 
-    if (existingIndex >= 0) {
-      // Already queued; update code/details if needed
-      items[existingIndex] = item;
-    } else {
-      items.push(item);
-    }
+      if (existingIndex >= 0) {
+        // Already queued; update code/details if needed
+        items[existingIndex] = item;
+      } else {
+        items.push(item);
+      }
 
-    await this.saveItems(items);
-    return item;
+      await this.saveItems(items);
+      return item;
+    });
   }
 
   /**
    * Remove a successfully processed or permanently rejected submission
    */
   async remove(submissionId) {
-    const items = await this.getItems();
-    const filtered = items.filter(i => String(i.submission_id) !== String(submissionId));
-    await this.saveItems(filtered);
+    return this._withLock(async () => {
+      const items = await this.getItems();
+      const filtered = items.filter(i => String(i.submission_id) !== String(submissionId));
+      await this.saveItems(filtered);
+    });
   }
 
   /**

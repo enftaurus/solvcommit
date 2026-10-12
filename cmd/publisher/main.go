@@ -55,9 +55,11 @@ func main() {
 	}
 	var ghClient github.Client
 	if ghAppID != "" && len(ghAppPEM) > 0 {
-		ghClient, err = github.NewClient(ghAppID, ghAppPEM, "")
+		c, err := github.NewClient(ghAppID, ghAppPEM, "")
 		if err != nil {
 			logger.Warn("Failed to initialize GitHub App client", "error", err)
+		} else {
+			ghClient = c
 		}
 	}
 

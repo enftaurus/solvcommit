@@ -2,12 +2,13 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: leetsync-postgres
-    network_mode: host
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-leetsync}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-leetsync}
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - leetsync_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,12 +21,11 @@ services:
   kafka:
     image: apache/kafka:3.8.0
     container_name: leetsync-kafka
-    network_mode: host
     restart: unless-stopped
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
@@ -36,6 +36,8 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_RETENTION_HOURS: 168
       KAFKA_LOG_RETENTION_MS: 604800000
+    ports:
+      - "127.0.0.1:9092:9092"
     volumes:
       - leetsync_kafka_data:/var/lib/kafka/data
     healthcheck:

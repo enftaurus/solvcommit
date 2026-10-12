@@ -17,6 +17,7 @@ import (
 type Client struct {
 	Brokers []string
 	Topic   string
+	writer  *kafka.Writer
 }
 
 // NewClient returns a new Kafka client wrapper
@@ -24,7 +25,22 @@ func NewClient(brokers []string, topic string) *Client {
 	return &Client{
 		Brokers: brokers,
 		Topic:   topic,
+		writer: &kafka.Writer{
+			Addr:         kafka.TCP(brokers...),
+			Topic:        topic,
+			Balancer:     &kafka.Hash{}, // Keyed by user_id
+			RequiredAcks: kafka.RequireAll,
+			Async:        false, // Synchronous ack before response
+		},
 	}
+}
+
+// Close closes the underlying persistent Kafka writer
+func (c *Client) Close() error {
+	if c.writer != nil {
+		return c.writer.Close()
+	}
+	return nil
 }
 
 // Ping verifies broker connectivity for readiness probe (D-03)
@@ -46,26 +62,12 @@ func (c *Client) Ping(ctx context.Context) error {
 	return fmt.Errorf("unable to reach any kafka broker in %v", c.Brokers)
 }
 
-// NewWriter creates a producer writer with acks=all (D-08)
-func (c *Client) NewWriter() *kafka.Writer {
-	return &kafka.Writer{
-		Addr:         kafka.TCP(c.Brokers...),
-		Topic:        c.Topic,
-		Balancer:     &kafka.Hash{}, // Keyed by user_id
-		RequiredAcks: kafka.RequireAll,
-		Async:        false, // Synchronous ack before response
-	}
-}
-
-// ProduceSubmission serializes and writes a submission message to Kafka (D-03, D-08)
+// ProduceSubmission serializes and writes a submission message to Kafka (D-03, D-08, Issue 23)
 func (c *Client) ProduceSubmission(ctx context.Context, msg *submissions.KafkaSubmissionMessage) error {
 	payloadBytes, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal kafka payload: %w", err)
 	}
-
-	writer := c.NewWriter()
-	defer writer.Close()
 
 	// Partition key is user_id so one user's commits remain ordered (PRD Kafka design)
 	kafkaMsg := kafka.Message{
@@ -74,7 +76,7 @@ func (c *Client) ProduceSubmission(ctx context.Context, msg *submissions.KafkaSu
 		Time:  time.Now(),
 	}
 
-	return writer.WriteMessages(ctx, kafkaMsg)
+	return c.writer.WriteMessages(ctx, kafkaMsg)
 }
 
 // NewReader creates a consumer reader for the topic

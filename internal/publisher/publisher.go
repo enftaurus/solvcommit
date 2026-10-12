@@ -110,10 +110,12 @@ func (w *Worker) ProcessSubmission(ctx context.Context, msg *submissions.KafkaSu
 		return fmt.Errorf("failed to load repository config: %w", err)
 	}
 
-	// 3. Derive destination path: <problem-slug>/submission-<id>.<ext> (D-11, FR-GH-04)
+	// 3. Derive destination path: <problem-slug>/submission-<id>.<ext> (D-11, FR-GH-04, Issue 25)
 	ext, ok := submissions.SupportedLanguages[strings.ToLower(msg.Language)]
 	if !ok {
-		ext = "txt"
+		w.logger.Warn("Unsupported language for submission", "language", msg.Language, "submission_id", msg.SubmissionID)
+		w.markFailed(ctx, msg, "UNSUPPORTED_LANGUAGE")
+		return nil
 	}
 	targetPath := fmt.Sprintf("%s/submission-%s.%s", msg.ProblemSlug, msg.SubmissionID, ext)
 
@@ -139,26 +141,48 @@ func (w *Worker) ProcessSubmission(ctx context.Context, msg *submissions.KafkaSu
 		// Subcase B: Visible Conflict (FR-HIST-04, D-14)
 		// Different content exists at path: STOP and record conflict, never overwrite
 		w.logger.Warn("Conflicting file already exists at target path; aborting overwrite", "path", targetPath)
-		_, _ = w.pool.Exec(ctx, `
-			UPDATE submissions 
-			SET status = 'failed', last_error_code = 'PATH_CONFLICT' 
-			WHERE user_id = $1 AND leetcode_submission_id = $2;
-		`, msg.UserID, subIDInt)
+		w.markFailed(ctx, msg, "PATH_CONFLICT")
 		return nil
 	} else if err != nil && !errors.Is(err, github.ErrFileNotFound) {
-		// Transient or GitHub API error checking path
-		return w.handleTransientError(ctx, msg.UserID, subIDInt, err)
+		switch {
+		case errors.Is(err, github.ErrPermissionDenied), errors.Is(err, github.ErrRepoNotFound):
+			w.markFailed(ctx, msg, "REPO_ACCESS")
+			return nil
+		default:
+			// Transient or GitHub API error checking path
+			return w.handleTransientError(ctx, msg.UserID, subIDInt, err)
+		}
 	}
 
 	// 6. Write file to GitHub repository (FR-GH-04, FR-GH-05, D-11)
 	commitMsg := fmt.Sprintf("feat: sync accepted %s submission (%s)", msg.ProblemTitle, msg.SubmissionID)
 	commitRes, err := w.github.PutFile(ctx, instID, repoOwner, repoName, targetPath, msg.Code, commitMsg, defaultBranch)
 	if err != nil {
-		return w.handleTransientError(ctx, msg.UserID, subIDInt, err)
+		// Issues 17 & 25: Handle permanent GitHub errors as terminal
+		switch {
+		case errors.Is(err, github.ErrPathConflict):
+			w.markFailed(ctx, msg, "PATH_CONFLICT")
+			return nil
+		case errors.Is(err, github.ErrPermissionDenied), errors.Is(err, github.ErrRepoNotFound):
+			w.markFailed(ctx, msg, "REPO_ACCESS")
+			return nil
+		default:
+			return w.handleTransientError(ctx, msg.UserID, subIDInt, err)
+		}
 	}
 
 	// 7. Update status to 'published' (D-09)
 	return w.recordSuccess(ctx, msg.UserID, subIDInt, targetPath, commitRes.CommitSHA)
+}
+
+func (w *Worker) markFailed(ctx context.Context, msg *submissions.KafkaSubmissionMessage, code string) {
+	id, err := strconv.ParseInt(msg.SubmissionID, 10, 64)
+	if err != nil {
+		return
+	}
+	if _, err := w.pool.Exec(ctx, `UPDATE submissions SET status='failed', last_error_code=$3 WHERE user_id=$1 AND leetcode_submission_id=$2`, msg.UserID, id, code); err != nil {
+		w.logger.Error("failed to mark submission failed", "error", err)
+	}
 }
 
 func (w *Worker) recordSuccess(ctx context.Context, userID string, subID int64, path, commitSHA string) error {
@@ -170,7 +194,8 @@ func (w *Worker) recordSuccess(ctx context.Context, userID string, subID int64, 
 		SET status = 'published',
 		    github_path = $3,
 		    commit_sha = $4,
-		    published_at = NOW()
+		    published_at = NOW(),
+		    last_error_code = NULL
 		WHERE user_id = $1 AND leetcode_submission_id = $2;
 	`
 	_, err := w.pool.Exec(ctx, query, userID, subID, path, commitSHA)
@@ -193,8 +218,20 @@ func (w *Worker) handleTransientError(ctx context.Context, userID string, subID 
 		    last_error_code = 'TRANSIENT_ERROR'
 		WHERE user_id = $1 AND leetcode_submission_id = $2;
 	`
-	_, _ = w.pool.Exec(ctx, query, userID, subID)
+	if _, execErr := w.pool.Exec(ctx, query, userID, subID); execErr != nil {
+		w.logger.Error("failed to update retrying state", "error", execErr)
+	}
 	return err
+}
+
+const maxAttempts = 5
+
+func backoff(attempt int) time.Duration {
+	d := time.Second << attempt // 2s, 4s, 8s, 16s, 32s
+	if d > 30*time.Second {
+		d = 30 * time.Second
+	}
+	return d
 }
 
 // RunConsumer runs the Kafka consumer loop until context is canceled
@@ -225,15 +262,25 @@ func (w *Worker) RunConsumer(ctx context.Context, reader *kafka.Reader) error {
 			continue
 		}
 
-		// Process submission
-		if err := w.ProcessSubmission(ctx, &subMsg); err != nil {
-			w.logger.Warn("Submission processing encountered transient error, will retry message", "error", err)
-			// Sleep briefly before retrying to avoid hot-looping on Kafka broker
-			time.Sleep(2 * time.Second)
-			continue
+		// Process submission with retry loop (Issue 3)
+		var perr error
+		for attempt := 1; attempt <= maxAttempts; attempt++ {
+			perr = w.ProcessSubmission(ctx, &subMsg)
+			if perr == nil {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				return nil // do not commit; message will be redelivered on restart
+			case <-time.After(backoff(attempt)):
+			}
 		}
 
-		// Commit Kafka offset upon successful processing
+		if perr != nil {
+			w.markFailed(ctx, &subMsg, "RETRIES_EXHAUSTED")
+		}
+
+		// Commit Kafka offset now that message is either published or marked failed
 		if err := reader.CommitMessages(ctx, m); err != nil {
 			w.logger.Error("Failed to commit Kafka offset", "error", err)
 		}

@@ -7,6 +7,8 @@ import {
   ExternalLink,
   Save,
   FolderGit2,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { Repository, GitHubRepoInfo } from "../types";
 import { api } from "../api";
@@ -77,6 +79,29 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const [isCreatingDefault, setIsCreatingDefault] = useState(false);
+
+  const handleCreateDefaultRepo = async () => {
+    setIsCreatingDefault(true);
+    setVerifyMessage(null);
+    try {
+      const newRepo = await api.createDefaultRepo("solvcommit-leetcode");
+      setVerifyMessage({
+        success: true,
+        text: `Created and linked default repository ${newRepo.owner}/${newRepo.name} with automated SolvCommit README!`,
+      });
+      await loadAvailableRepos();
+      onRepoUpdated();
+    } catch (err: any) {
+      setVerifyMessage({
+        success: false,
+        text: "Could not create default repository: " + err.message,
+      });
+    } finally {
+      setIsCreatingDefault(false);
     }
   };
 
@@ -170,17 +195,44 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
             )}
           </div>
         ) : (
-          <div className="py-4 text-xs text-zinc-500">
-            No repository configured yet. Select one from your authorized GitHub App repositories below.
+          <div className="py-4 text-xs text-zinc-500 space-y-3">
+            <p>No repository configured yet. Select one from your authorized GitHub App repositories below, or create the default repository.</p>
+            {verifyMessage && (
+              <div
+                className={`flex items-center gap-2 rounded-lg p-3 text-xs border ${
+                  verifyMessage.success
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200/70"
+                    : "bg-rose-50 text-rose-800 border-rose-200/70"
+                }`}
+              >
+                {verifyMessage.success ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                )}
+                <span>{verifyMessage.text}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Select / Change Repo Card */}
       <div className="rounded-xl border border-zinc-200/90 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-        <h3 className="text-sm font-semibold text-zinc-900">
-          Select or Switch Destination Repository
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-zinc-900">
+            Select or Switch Destination Repository
+          </h3>
+          <button
+            onClick={loadAvailableRepos}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
+            title="Reload repository list from GitHub"
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin text-zinc-400" : "text-zinc-600"}`} />
+            <span>Reload Repositories</span>
+          </button>
+        </div>
 
         {availableRepos.length > 0 ? (
           <div className="space-y-4">
@@ -219,7 +271,7 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
               />
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 flex items-center gap-3">
               <button
                 onClick={handleSaveRepo}
                 disabled={isLoading}
@@ -228,16 +280,33 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
                 <Save className="h-3.5 w-3.5" />
                 <span>{isLoading ? "Saving..." : "Save Destination"}</span>
               </button>
+
+              <button
+                onClick={handleCreateDefaultRepo}
+                disabled={isCreatingDefault}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <span>{isCreatingDefault ? "Creating Repo..." : "Create New 'solvcommit-leetcode'"}</span>
+              </button>
             </div>
           </div>
         ) : (
-          <div className="rounded-lg bg-zinc-50 p-4 text-xs text-zinc-500 border border-zinc-200/60">
-            <p>
-              No repositories detected with the LeetSync GitHub App installed.
+          <div className="rounded-lg bg-zinc-50 p-5 text-xs text-zinc-600 border border-zinc-200/60 space-y-3">
+            <div className="font-medium text-zinc-800">No destination repository selected yet.</div>
+            <p className="text-zinc-500">
+              You can instantly create a brand new repository initialized with SolvCommit, or install the app on an existing repo.
             </p>
-            <p className="mt-1 text-zinc-400">
-              Install the GitHub App on your desired repository in GitHub Settings, then refresh this page.
-            </p>
+            <div className="pt-1">
+              <button
+                onClick={handleCreateDefaultRepo}
+                disabled={isCreatingDefault}
+                className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800 active:scale-95 transition"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                <span>{isCreatingDefault ? "Creating & Initializing..." : "Create Default Repository (solvcommit-leetcode)"}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

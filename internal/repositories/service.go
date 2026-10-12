@@ -35,6 +35,7 @@ type SelectRepoRequest struct {
 	Owner         string `json:"owner"`
 	Name          string `json:"name"`
 	DefaultBranch string `json:"default_branch"`
+	InitReadme    bool   `json:"init_readme"`
 }
 
 type Service struct {
@@ -92,19 +93,33 @@ func (s *Service) SelectRepository(ctx context.Context, userID string, req *Sele
 		return nil, fmt.Errorf("write verification failed: %w", err)
 	}
 
-	// 2. Safe README handling (FR-GH-03, D-14): Never touch existing README.
-	// Only initialize basic README if none exists.
-	_, err = s.github.GetFile(ctx, instID, req.Owner, req.Name, "README.md")
-	if errors.Is(err, github.ErrFileNotFound) {
-		defaultReadme := "# LeetCode Submissions\n\nPersonal LeetCode solutions synchronized automatically by [LeetSync](https://github.com/adias/leetsync).\n"
-		_, putErr := s.github.PutFile(ctx, instID, req.Owner, req.Name, "README.md", defaultReadme, "chore: initialize leetsync readme", branch)
-		if putErr != nil {
-			// Non-fatal if branch is empty or initialization fails; log and proceed
-			fmt.Printf("[LeetSync] Note: initial README creation skipped/failed: %v\n", putErr)
+	// 2. Safe README handling (FR-GH-03, D-14, Issue 28): Never touch existing README.
+	// Only initialize basic README if opted-in and none exists.
+	if req.InitReadme {
+		_, err = s.github.GetFile(ctx, instID, req.Owner, req.Name, "README.md")
+		if errors.Is(err, github.ErrFileNotFound) {
+			defaultReadme := "# LeetCode Submissions\n\nPersonal LeetCode solutions synchronized automatically by [LeetSync](https://github.com/enftaurus/solvcommit).\n"
+			_, putErr := s.github.PutFile(ctx, instID, req.Owner, req.Name, "README.md", defaultReadme, "chore: initialize leetsync readme", branch)
+			if putErr != nil {
+				// Non-fatal if branch is empty or initialization fails; log and proceed
+				fmt.Printf("[LeetSync] Note: initial README creation skipped/failed: %v\n", putErr)
+			}
 		}
 	}
 
-	// 3. Persist repository in database
+	// 3. Persist repository in database in a transaction (Issue 11: deactivate previous active repos)
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Deactivate any currently active repository for this user
+	_, err = tx.Exec(ctx, `UPDATE repositories SET status = 'inactive', updated_at = NOW() WHERE user_id = $1 AND status = 'active';`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deactivate prior active repository: %w", err)
+	}
+
 	query := `
 		INSERT INTO repositories (
 			user_id, github_repo_id, owner, name, default_branch, status, updated_at
@@ -120,12 +135,16 @@ func (s *Service) SelectRepository(ctx context.Context, userID string, req *Sele
 	`
 
 	var repo Repository
-	err = s.pool.QueryRow(ctx, query, userID, req.GitHubRepoID, req.Owner, req.Name, branch).Scan(
+	err = tx.QueryRow(ctx, query, userID, req.GitHubRepoID, req.Owner, req.Name, branch).Scan(
 		&repo.ID, &repo.UserID, &repo.GitHubRepoID, &repo.Owner, &repo.Name,
 		&repo.DefaultBranch, &repo.Status, &repo.CreatedAt, &repo.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save repository: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit repository selection: %w", err)
 	}
 
 	return &repo, nil
@@ -193,4 +212,49 @@ func (s *Service) VerifySelected(ctx context.Context, userID string) error {
 	}
 
 	return s.github.VerifyRepoWrite(ctx, instID, repo.Owner, repo.Name)
+}
+
+// CreateAndSelectDefaultRepo creates a new default LeetCode repository (e.g. solvcommit-leetcode)
+// and commits an automated SolvCommit README.
+func (s *Service) CreateAndSelectDefaultRepo(ctx context.Context, userID, repoName string) (*Repository, error) {
+	if repoName == "" {
+		repoName = "solvcommit-leetcode"
+	}
+
+	instID, err := s.GetUserInstallationID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	description := "LeetCode solutions synced automatically by SolvCommit."
+	created, err := s.github.CreateRepository(ctx, instID, repoName, description, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create default repository: %w", err)
+	}
+
+	readmeContent := fmt.Sprintf(`# %s
+
+Personal LeetCode solutions synchronized automatically by [SolvCommit](https://github.com/enftaurus/solvcommit).
+
+## Structure
+Accepted solutions are automatically synchronized into clean directories by problem slug:
+`+"```"+`
+├── <problem-slug>/
+│   └── submission-<id>.<ext>
+`+"```"+`
+
+> *Automated by SolvCommit*
+`, created.Name)
+
+	commitMsg := "chore: initial commit with SolvCommit readme"
+	_, _ = s.github.PutFile(ctx, instID, created.Owner, created.Name, "README.md", readmeContent, commitMsg, created.DefaultBranch)
+
+	// Now select this repository as active destination
+	return s.SelectRepository(ctx, userID, &SelectRepoRequest{
+		GitHubRepoID:  created.ID,
+		Owner:         created.Owner,
+		Name:          created.Name,
+		DefaultBranch: created.DefaultBranch,
+		InitReadme:    false,
+	})
 }

@@ -16,6 +16,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+var (
+	ErrSyncPaused = errors.New("sync is paused for this account")
+)
+
 // KafkaProducer defines the interface to produce submissions to Kafka (D-03, D-08)
 type KafkaProducer interface {
 	ProduceSubmission(ctx context.Context, msg *KafkaSubmissionMessage) error
@@ -38,6 +42,13 @@ func NewService(pool *pgxpool.Pool, producer KafkaProducer, maxCodeBytes int64) 
 // Ingest handles validation, idempotency check, Kafka produce, and metadata row insertion
 // Fulfills FR-ING-01, FR-ING-02, FR-ING-03, FR-ING-04, D-02, D-08, D-10
 func (s *Service) Ingest(ctx context.Context, userID, deviceID string, req *IngestionRequest) (*IngestionResult, error) {
+	// Issue 5: Check if user sync is paused
+	var userStatus string
+	err := s.pool.QueryRow(ctx, "SELECT status FROM users WHERE id = $1;", userID).Scan(&userStatus)
+	if err == nil && userStatus == "paused" {
+		return nil, ErrSyncPaused
+	}
+
 	// 1. Validate submission payload (FR-ING-02, D-10)
 	val, err := ValidateIngestion(req, s.maxCodeBytes)
 	if err != nil {
@@ -108,7 +119,8 @@ func (s *Service) Ingest(ctx context.Context, userID, deviceID string, req *Inge
 			language, status, content_sha256, attempt_count, received_at
 		) VALUES ($1, $2, $3, $4, $5, 'queued', $6, 0, $7)
 		ON CONFLICT (user_id, leetcode_submission_id) 
-		DO UPDATE SET status = 'queued', received_at = EXCLUDED.received_at;
+		DO UPDATE SET status = 'queued', received_at = EXCLUDED.received_at
+		WHERE submissions.status IN ('failed', 'expired', 'retrying');
 	`
 	_, err = s.pool.Exec(ctx, insertSQL,
 		userID, val.SubmissionID, val.ProblemSlug, val.ProblemTitle,
@@ -200,23 +212,27 @@ func (s *Service) GetSyncStatus(ctx context.Context, userID string) (*SyncStatus
 	for rows.Next() {
 		var st string
 		var cnt int
-		if err := rows.Scan(&st, &cnt); err == nil {
-			switch st {
-			case "queued":
-				res.Queued = cnt
-			case "processing":
-				res.Processing = cnt
-			case "retrying":
-				res.Retrying = cnt
-			case "published":
-				res.Published = cnt
-			case "failed":
-				res.Failed = cnt
-			case "expired":
-				res.Expired = cnt
-			}
-			res.Total += cnt
+		if err := rows.Scan(&st, &cnt); err != nil {
+			return nil, fmt.Errorf("failed to scan sync count: %w", err)
 		}
+		switch st {
+		case "queued":
+			res.Queued = cnt
+		case "processing":
+			res.Processing = cnt
+		case "retrying":
+			res.Retrying = cnt
+		case "published":
+			res.Published = cnt
+		case "failed":
+			res.Failed = cnt
+		case "expired":
+			res.Expired = cnt
+		}
+		res.Total += cnt
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error reading sync count rows: %w", err)
 	}
 
 	// Check pause state
@@ -268,9 +284,13 @@ func (s *Service) ListSubmissions(ctx context.Context, userID string, limit, off
 			&r.Language, &r.Status, &r.ContentSHA256, &r.GitHubPath, &r.CommitSHA,
 			&r.AttemptCount, &r.NextAttemptAt, &r.LastError, &r.ReceivedAt, &r.PublishedAt,
 		)
-		if err == nil {
-			list = append(list, r)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan submission row: %w", err)
 		}
+		list = append(list, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error reading submission rows: %w", err)
 	}
 	if list == nil {
 		list = []SubmissionRow{}
@@ -284,11 +304,14 @@ func (s *Service) ListSubmissions(ctx context.Context, userID string, limit, off
 	}, nil
 }
 
-// RetrySubmission re-queues a failed or expired submission for retry (FR-DASH-02, D-07)
+// RetrySubmission marks a failed or expired submission ready for re-ingestion by the extension (FR-DASH-02, D-07, Issue 4).
+// Because PostgreSQL strictly contains no source code (Non-Negotiable Invariant #2), the backend cannot
+// directly re-publish without source code. Instead, status is reset to 'failed' with error 'RETRY_REQUESTED'
+// so that FindMissingSubmissions and the extension offline queue will re-fetch details and re-send.
 func (s *Service) RetrySubmission(ctx context.Context, userID, subID string) error {
 	query := `
 		UPDATE submissions
-		SET status = 'queued', attempt_count = 0, next_attempt_at = NULL, last_error_code = NULL
+		SET status = 'failed', attempt_count = 0, next_attempt_at = NULL, last_error_code = 'RETRY_REQUESTED'
 		WHERE user_id = $1 AND (id::text = $2 OR leetcode_submission_id::text = $2) AND status IN ('failed', 'expired', 'retrying');
 	`
 	cmd, err := s.pool.Exec(ctx, query, userID, subID)

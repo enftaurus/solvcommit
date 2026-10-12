@@ -14,7 +14,8 @@
     "http://127.0.0.1:8080/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["queue.js", "background.js"]
   },
   "browser_specific_settings": {
     "gecko": {
@@ -23,6 +24,16 @@
     }
   },
   "content_scripts": [
+    {
+      "matches": [
+        "https://leetcode.com/problems/*"
+      ],
+      "js": [
+        "main-world.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
     {
       "matches": [
         "https://leetcode.com/problems/*"

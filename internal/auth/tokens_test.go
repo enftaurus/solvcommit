@@ -77,3 +77,29 @@ func TestSessionCookie(t *testing.T) {
 		t.Errorf("expected signature failure with wrong secret")
 	}
 }
+
+func TestTokenCrossTypeRejection(t *testing.T) {
+	secret := []byte("super-secret-key-for-testing-123456")
+
+	// Mint device token
+	deviceToken, err := auth.MintDeviceAccessToken(secret, "dev-1", "user-1", "fam-1", 15*time.Minute)
+	if err != nil {
+		t.Fatalf("failed to mint device token: %v", err)
+	}
+
+	// Mint session cookie
+	sessionCookie, err := auth.MintSessionCookie(secret, "user-1", 7*24*time.Hour)
+	if err != nil {
+		t.Fatalf("failed to mint session cookie: %v", err)
+	}
+
+	// Verify device token with VerifySessionCookie -> MUST FAIL
+	if _, err := auth.VerifySessionCookie(secret, deviceToken); err == nil {
+		t.Errorf("expected VerifySessionCookie to reject device token, but it passed")
+	}
+
+	// Verify session cookie with VerifyDeviceAccessToken -> MUST FAIL
+	if _, err := auth.VerifyDeviceAccessToken(secret, sessionCookie); err == nil {
+		t.Errorf("expected VerifyDeviceAccessToken to reject session cookie, but it passed")
+	}
+}

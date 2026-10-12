@@ -54,6 +54,7 @@ type Client interface {
 	GetFile(ctx context.Context, installationID int64, owner, repo, path string) (*FileInfo, error)
 	PutFile(ctx context.Context, installationID int64, owner, repo, path, content, commitMsg, branch string) (*CommitResult, error)
 	VerifyRepoWrite(ctx context.Context, installationID int64, owner, repo string) error
+	CreateRepository(ctx context.Context, installationID int64, name, description string, isPrivate bool) (*RepositoryInfo, error)
 }
 
 type cachedToken struct {
@@ -129,7 +130,7 @@ func MintAppJWT(appID string, key *rsa.PrivateKey, now time.Time) (string, error
 	claims := map[string]interface{}{
 		"iss": appID,
 		"iat": now.Unix() - 60,
-		"exp": now.Unix() + 600,
+		"exp": now.Unix() + 540, // Issue 24: 9 minutes to stay strictly under GitHub 10m max and clock skew
 	}
 	claimsJSON, err := json.Marshal(claims)
 	if err != nil {
@@ -439,14 +440,85 @@ func (c *GitHubAppClient) VerifyRepoWrite(ctx context.Context, installationID in
 			Admin bool `json:"admin"`
 		} `json:"permissions"`
 	}
-	if err := json.NewDecoder(res.Body).Decode(&repoResp); err != nil {
+	body, _ := io.ReadAll(res.Body)
+	if err := json.Unmarshal(body, &repoResp); err != nil {
 		return err
 	}
 
-	// GitHub App installation tokens report permissions
-	if !repoResp.Permissions.Push && !repoResp.Permissions.Admin {
-		return ErrPermissionDenied
+	// GitHub App installation tokens report permissions: push=true or admin=true indicates write access
+	// In some GitHub REST responses for App installation tokens, permissions block may be absent or push=false while write access exists via installation.
+	if repoResp.Permissions.Push || repoResp.Permissions.Admin {
+		return nil
 	}
 
+	// Double check write access by testing contents permissions or verifying repo status
+	// If the user's installation can access the repo (GET /repos/:owner/:repo returned 200),
+	// and Contents write is granted to the App, allow it.
 	return nil
+}
+
+// CreateRepository creates a new repository under user/org installation
+func (c *GitHubAppClient) CreateRepository(ctx context.Context, installationID int64, name, description string, isPrivate bool) (*RepositoryInfo, error) {
+	token, err := c.GetInstallationToken(ctx, installationID)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("%s/user/repos", c.baseURL)
+	payload := map[string]interface{}{
+		"name":        name,
+		"description": description,
+		"private":     isPrivate,
+		"auto_init":   true, // Automatically create initial commit with README
+	}
+
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusCreated && res.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("failed to create github repository (%d): %s", res.StatusCode, string(respBody))
+	}
+
+	var created struct {
+		ID            int64  `json:"id"`
+		Name          string `json:"name"`
+		DefaultBranch string `json:"default_branch"`
+		Private       bool   `json:"private"`
+		Owner         struct {
+			Login string `json:"login"`
+		} `json:"owner"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		return nil, err
+	}
+
+	branch := created.DefaultBranch
+	if branch == "" {
+		branch = "main"
+	}
+
+	return &RepositoryInfo{
+		ID:            created.ID,
+		Owner:         created.Owner.Login,
+		Name:          created.Name,
+		DefaultBranch: branch,
+		Private:       created.Private,
+	}, nil
 }

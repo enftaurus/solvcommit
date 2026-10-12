@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -65,6 +66,7 @@ type RepositoryManager interface {
 	GetSelected(ctx context.Context, userID string) (*repositories.Repository, error)
 	UpdateSelected(ctx context.Context, userID string, defaultBranch string) (*repositories.Repository, error)
 	VerifySelected(ctx context.Context, userID string) error
+	CreateAndSelectDefaultRepo(ctx context.Context, userID, repoName string) (*repositories.Repository, error)
 }
 
 // Handler holds dependencies for API endpoints
@@ -78,6 +80,8 @@ type Handler struct {
 	GitHub        auth.GitHubClient
 	SessionSecret []byte
 	AppEnv        string
+	PublicURL     string
+	TrustProxy    bool
 }
 
 // NewRouter constructs the HTTP servemux with all v1 routes (ponytail: stdlib net/http)
@@ -104,6 +108,7 @@ func NewRouter(h *Handler) http.Handler {
 	// Repositories (Phase 4: GitHub Publishing & Repositories)
 	mux.HandleFunc("GET /api/v1/github/repositories", h.requireUserSession(h.handleListGitHubRepos))
 	mux.HandleFunc("POST /api/v1/repositories", h.requireUserSession(h.handleSelectRepository))
+	mux.HandleFunc("POST /api/v1/repositories/create-default", h.requireUserSession(h.handleCreateDefaultRepository))
 	mux.HandleFunc("GET /api/v1/repositories/selected", h.requireUserSession(h.handleGetSelectedRepository))
 	mux.HandleFunc("PUT /api/v1/repositories/selected", h.requireUserSession(h.handleUpdateSelectedRepository))
 	mux.HandleFunc("POST /api/v1/repositories/verify", h.requireUserSession(h.handleVerifyRepository))
@@ -201,7 +206,7 @@ func (h *Handler) handleGitHubStart(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	redirectURI := getFullURL(r, "/api/v1/auth/github/callback")
+	redirectURI := h.getFullURL(r, "/api/v1/auth/github/callback")
 	authURL := h.GitHub.GetAuthURL(state, redirectURI)
 
 	// If request expects JSON (from frontend API call), return URL; otherwise redirect
@@ -221,11 +226,16 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 
 	stateQuery := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
+	installationIDStr := r.URL.Query().Get("installation_id")
 
-	stateCookie, err := r.Cookie("leetsync_oauth_state")
-	if err != nil || stateCookie.Value == "" || stateCookie.Value != stateQuery {
-		http.Error(w, "invalid or expired oauth state", http.StatusBadRequest)
-		return
+	// If this callback comes from GitHub App Installation ("Setup URL" / post-installation),
+	// GitHub does not provide a state parameter. If it's a standard login, verify state.
+	if installationIDStr == "" {
+		stateCookie, err := r.Cookie("leetsync_oauth_state")
+		if err != nil || stateCookie.Value == "" || stateCookie.Value != stateQuery {
+			http.Error(w, "invalid or expired oauth state", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Clear state cookie
@@ -238,15 +248,47 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	userInfo, err := h.GitHub.ExchangeCode(r.Context(), code)
-	if err != nil {
-		http.Error(w, "failed to exchange github code: "+err.Error(), http.StatusBadGateway)
-		return
+	var githubUserID int64
+	var instID int64
+	if installationIDStr != "" {
+		if parsed, err := strconv.ParseInt(installationIDStr, 10, 64); err == nil {
+			instID = parsed
+		}
 	}
 
-	userID, err := h.Users.UpsertGitHubUser(r.Context(), userInfo.GitHubUserID, userInfo.InstallationID)
-	if err != nil {
-		http.Error(w, "failed to save user: "+err.Error(), http.StatusInternalServerError)
+	if code != "" {
+		userInfo, err := h.GitHub.ExchangeCode(r.Context(), code)
+		if err != nil {
+			http.Error(w, "failed to exchange github code: "+err.Error(), http.StatusBadGateway)
+			return
+		}
+		githubUserID = userInfo.GitHubUserID
+		if instID == 0 {
+			instID = userInfo.InstallationID
+		}
+	}
+
+	// If we still don't have githubUserID from code, check existing session cookie
+	var userID string
+	if githubUserID != 0 {
+		var err error
+		userID, err = h.Users.UpsertGitHubUser(r.Context(), githubUserID, instID)
+		if err != nil {
+			http.Error(w, "failed to save user: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if sessionCookie, err := r.Cookie("leetsync_session"); err == nil && sessionCookie.Value != "" {
+		if payload, err := auth.VerifySessionCookie(h.SessionSecret, sessionCookie.Value); err == nil {
+			userID = payload.UserID
+			// Update installation ID on existing user
+			if instID > 0 {
+				_, _ = h.Users.UpsertGitHubUser(r.Context(), 0, instID)
+			}
+		}
+	}
+
+	if userID == "" {
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
 
@@ -267,11 +309,8 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"status":  "authenticated",
-		"user_id": userID,
-	})
+	// Redirect user back to the web dashboard root
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -334,7 +373,7 @@ func (h *Handler) handlePairDevice(w http.ResponseWriter, r *http.Request) {
 		body.DeviceName = "Chrome Extension"
 	}
 
-	ip := extractClientIP(r)
+	ip := h.extractClientIP(r)
 	userAgent := r.UserAgent()
 
 	result, err := h.Devices.Pair(r.Context(), userID, body.DeviceName, userAgent, ip)
@@ -358,7 +397,7 @@ func (h *Handler) handleRefreshDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ip := extractClientIP(r)
+	ip := h.extractClientIP(r)
 	result, err := h.Devices.Refresh(r.Context(), body.DeviceID, body.RefreshToken, ip)
 	if err != nil {
 		if errors.Is(err, devices.ErrTokenReuseDetected) {
@@ -465,6 +504,34 @@ func (h *Handler) handleSelectRepository(w http.ResponseWriter, r *http.Request)
 	_ = json.NewEncoder(w).Encode(repo)
 }
 
+func (h *Handler) handleCreateDefaultRepository(w http.ResponseWriter, r *http.Request) {
+	if h.Repositories == nil {
+		http.Error(w, "repository service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	userID := r.Context().Value(userIDKey).(string)
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	repo, err := h.Repositories.CreateAndSelectDefaultRepo(r.Context(), userID, req.Name)
+	if err != nil {
+		fmt.Printf("[API ERROR] CreateAndSelectDefaultRepo failed: %v\n", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(repo)
+}
+
 func (h *Handler) handleGetSelectedRepository(w http.ResponseWriter, r *http.Request) {
 	if h.Repositories == nil {
 		http.Error(w, "repository service unavailable", http.StatusServiceUnavailable)
@@ -549,14 +616,19 @@ func (h *Handler) handleSyncSubmissions(w http.ResponseWriter, r *http.Request) 
 	userID, _ := r.Context().Value(userIDKey).(string)
 	deviceID, _ := r.Context().Value(deviceIDKey).(string)
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit (Issue 14)
 	var req submissions.IngestionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	result, err := h.Submissions.Ingest(r.Context(), userID, deviceID, &req)
 	if err != nil {
+		if errors.Is(err, submissions.ErrSyncPaused) {
+			http.Error(w, "account sync is currently paused", http.StatusForbidden)
+			return
+		}
 		if errors.Is(err, submissions.ErrNotAccepted) ||
 			errors.Is(err, submissions.ErrUnsupportedLanguage) ||
 			errors.Is(err, submissions.ErrMissingProblemInfo) ||
@@ -565,18 +637,18 @@ func (h *Handler) handleSyncSubmissions(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		if errors.Is(err, submissions.ErrPayloadTooLarge) {
-			http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+			http.Error(w, "payload too large", http.StatusRequestEntityTooLarge)
 			return
 		}
 		if errors.Is(err, submissions.ErrEmptyCode) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "code cannot be empty", http.StatusBadRequest)
 			return
 		}
 		if strings.Contains(err.Error(), "kafka") {
-			http.Error(w, "temporary ingestion failure: "+err.Error(), http.StatusServiceUnavailable)
+			http.Error(w, "temporary ingestion service unavailable", http.StatusServiceUnavailable)
 			return
 		}
-		http.Error(w, "ingestion failed: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "internal ingestion error", http.StatusInternalServerError)
 		return
 	}
 
@@ -750,12 +822,16 @@ func (h *Handler) RequireDeviceToken(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Helper: Extract client IP (D-13)
-func extractClientIP(r *http.Request) string {
-	// If forwarded header exists from trusted reverse proxy
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		parts := strings.Split(xff, ",")
-		return strings.TrimSpace(parts[0])
+// Helper: Extract client IP (D-13, Issue 13)
+func (h *Handler) extractClientIP(r *http.Request) string {
+	// Only trust X-Forwarded-For if explicitly configured behind a trusted reverse proxy
+	if h.TrustProxy {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			parts := strings.Split(xff, ",")
+			if len(parts) > 0 {
+				return strings.TrimSpace(parts[len(parts)-1])
+			}
+		}
 	}
 
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -765,9 +841,12 @@ func extractClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-func getFullURL(r *http.Request, path string) string {
+func (h *Handler) getFullURL(r *http.Request, path string) string {
+	if h.PublicURL != "" {
+		return strings.TrimRight(h.PublicURL, "/") + path
+	}
 	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+	if r.TLS != nil || (h.TrustProxy && r.Header.Get("X-Forwarded-Proto") == "https") {
 		scheme = "https"
 	}
 	return scheme + "://" + r.Host + path

@@ -30,6 +30,7 @@ func HashToken(token string) string {
 
 // DeviceAccessTokenPayload holds claims for device access tokens (ponytail: stdlib HMAC token)
 type DeviceAccessTokenPayload struct {
+	Typ      string `json:"typ"`       // Issue 8: must be "device"
 	DeviceID string `json:"device_id"`
 	UserID   string `json:"user_id"`
 	FamilyID string `json:"family_id"`
@@ -39,6 +40,7 @@ type DeviceAccessTokenPayload struct {
 // MintDeviceAccessToken creates a signed access token valid for 15 minutes
 func MintDeviceAccessToken(secret []byte, deviceID, userID, familyID string, ttl time.Duration) (string, error) {
 	payload := DeviceAccessTokenPayload{
+		Typ:      "device",
 		DeviceID: deviceID,
 		UserID:   userID,
 		FamilyID: familyID,
@@ -79,6 +81,11 @@ func VerifyDeviceAccessToken(secret []byte, tokenStr string) (*DeviceAccessToken
 		return nil, errors.New("failed to parse token payload")
 	}
 
+	// Issue 8: reject tokens that were not minted as device tokens
+	if payload.Typ != "device" {
+		return nil, errors.New("token type mismatch: expected device token")
+	}
+
 	if time.Now().Unix() > payload.Exp {
 		return nil, errors.New("token expired")
 	}
@@ -88,6 +95,7 @@ func VerifyDeviceAccessToken(secret []byte, tokenStr string) (*DeviceAccessToken
 
 // UserSessionPayload holds claims for web session cookie
 type UserSessionPayload struct {
+	Typ    string `json:"typ"`    // Issue 8: must be "session"
 	UserID string `json:"user_id"`
 	Exp    int64  `json:"exp"`
 }
@@ -95,6 +103,7 @@ type UserSessionPayload struct {
 // MintSessionCookie creates a signed session cookie payload
 func MintSessionCookie(secret []byte, userID string, ttl time.Duration) (string, error) {
 	payload := UserSessionPayload{
+		Typ:    "session",
 		UserID: userID,
 		Exp:    time.Now().Add(ttl).Unix(),
 	}
@@ -131,6 +140,11 @@ func VerifySessionCookie(secret []byte, cookieVal string) (*UserSessionPayload, 
 	var payload UserSessionPayload
 	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
 		return nil, errors.New("failed to parse session payload")
+	}
+
+	// Issue 8: reject tokens that were not minted as session cookies
+	if payload.Typ != "session" {
+		return nil, errors.New("token type mismatch: expected session token")
 	}
 
 	if time.Now().Unix() > payload.Exp {

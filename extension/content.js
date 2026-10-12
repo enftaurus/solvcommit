@@ -70,12 +70,27 @@ async function fetchSubmissionDetails(submissionId) {
   return json.data?.submissionDetails;
 }
 
+async function waitForFinalDetails(id) {
+  for (let i = 0; i < 15; i++) {
+    try {
+      const d = await fetchSubmissionDetails(id);
+      if (d && d.statusDisplay && d.code && !/pending|judging|started/i.test(d.statusDisplay)) {
+        return d;
+      }
+    } catch (e) {
+      console.warn("[LeetSync] Polling submission details attempt failed:", e.message);
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return null;
+}
+
 // Handle detected submission ID
 async function handleSubmissionCaptured(submissionId) {
   try {
-    const details = await fetchSubmissionDetails(submissionId);
+    const details = await waitForFinalDetails(submissionId);
     if (!details) {
-      console.warn("[LeetSync] Could not fetch details for submission:", submissionId);
+      console.warn("[LeetSync] Could not fetch final details for submission:", submissionId);
       return;
     }
 
@@ -85,11 +100,19 @@ async function handleSubmissionCaptured(submissionId) {
       return;
     }
 
+    const problemSlug = details.question?.titleSlug || extractProblemSlugFromUrl();
+    const problemTitle = details.question?.title || details.question?.titleSlug || problemSlug;
+    const lang = details.lang?.name;
+    if (!lang) {
+      console.warn("[LeetSync] Missing language in submission details, skipping");
+      return;
+    }
+
     const payload = {
       submission_id: String(submissionId),
-      problem_slug: details.question?.titleSlug || extractProblemSlugFromUrl(),
-      problem_title: details.question?.title || details.question?.titleSlug,
-      language: details.lang?.name || "python3",
+      problem_slug: problemSlug,
+      problem_title: problemTitle,
+      language: lang,
       code: details.code,
       status: "Accepted",
       submitted_at: new Date(details.timestamp * 1000).toISOString()

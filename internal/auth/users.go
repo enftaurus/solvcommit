@@ -59,10 +59,12 @@ func (s *UserService) UpsertGitHubUser(ctx context.Context, githubUserID, instal
 			return "", fmt.Errorf("failed to link github connection: %w", err)
 		}
 	} else {
-		// Update installation ID if changed
+		// Update installation ID if changed (do not overwrite with 0)
 		updateConn := `
 			UPDATE github_connections
-			SET installation_id = $1, status = 'connected', updated_at = NOW()
+			SET installation_id = CASE WHEN $1 > 0 THEN $1 ELSE installation_id END,
+			    status = 'connected',
+			    updated_at = NOW()
 			WHERE user_id = $2;
 		`
 		if _, err := tx.Exec(ctx, updateConn, installationID, userID); err != nil {

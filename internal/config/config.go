@@ -19,6 +19,9 @@ type Config struct {
 	MaxCodeBytes  int64
 }
 
+// devSessionSecret is the insecure default used only in development.
+const devSessionSecret = "dev-session-secret-at-least-32-bytes-long"
+
 // Load reads environment variables with fallback to .env file if present
 func Load() (*Config, error) {
 	// Attempt to load .env if present (ponytail: minimal stdlib .env reader)
@@ -29,7 +32,7 @@ func Load() (*Config, error) {
 		HTTPAddr:      getEnv("HTTP_ADDR", ":8080"),
 		DatabaseURL:   getEnv("DATABASE_URL", "postgres://leetsync:change-me@localhost:5432/leetsync?sslmode=disable"),
 		KafkaTopic:    getEnv("KAFKA_TOPIC_SUBMISSIONS", "submissions"),
-		SessionSecret: getEnv("SESSION_SECRET", "dev-session-secret-at-least-32-bytes-long"),
+		SessionSecret: getEnv("SESSION_SECRET", devSessionSecret),
 		MaxCodeBytes:  int64(getEnvInt("MAX_CODE_BYTES", 262144)), // 256 KB default
 	}
 
@@ -44,6 +47,13 @@ func Load() (*Config, error) {
 	}
 	if len(cfg.KafkaBrokers) == 0 || cfg.KafkaBrokers[0] == "" {
 		return nil, fmt.Errorf("KAFKA_BROKERS is required")
+	}
+
+	// Issue 7: reject weak/default SESSION_SECRET in production
+	if cfg.AppEnv == "production" {
+		if cfg.SessionSecret == devSessionSecret || len(cfg.SessionSecret) < 32 {
+			return nil, fmt.Errorf("SESSION_SECRET must be a strong random value (>=32 bytes) in production; refusing to start with dev default")
+		}
 	}
 
 	return cfg, nil
