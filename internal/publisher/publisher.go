@@ -171,34 +171,77 @@ func (w *Worker) ProcessSubmission(ctx context.Context, msg *submissions.KafkaSu
 		}
 	}
 
-	// 7. Maintain SolvCommit section and badges in README.md
+	// 7. Update status to 'published' (D-09)
+	if err := w.recordSuccess(ctx, msg.UserID, subIDInt, targetPath, commitRes.CommitSHA); err != nil {
+		return err
+	}
+
+	// 8. Maintain SolvCommit section and badges in README.md
 	w.ensureReadmeBadge(ctx, instID, repoOwner, repoName, defaultBranch, msg)
 
-	// 8. Update status to 'published' (D-09)
-	return w.recordSuccess(ctx, msg.UserID, subIDInt, targetPath, commitRes.CommitSHA)
+	return nil
 }
 
 func (w *Worker) ensureReadmeBadge(ctx context.Context, instID int64, owner, repo, branch string, msg *submissions.KafkaSubmissionMessage) {
 	const markerStart = "<!-- SOLVCOMMIT_START -->"
 	const markerEnd = "<!-- SOLVCOMMIT_END -->"
 
-	var count int
-	_ = w.pool.QueryRow(ctx, "SELECT COUNT(*) FROM submissions WHERE user_id = $1 AND status = 'published';", msg.UserID).Scan(&count)
-	count++ // Count current one
+	type subItem struct {
+		Title string
+		Slug  string
+		Lang  string
+		Path  string
+	}
+	var items []subItem
+	rows, err := w.pool.Query(ctx, `
+		SELECT problem_title, problem_slug, language, github_path
+		FROM submissions
+		WHERE user_id = $1 AND status = 'published'
+		ORDER BY published_at DESC;
+	`, msg.UserID)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var it subItem
+			if err := rows.Scan(&it.Title, &it.Slug, &it.Lang, &it.Path); err == nil {
+				items = append(items, it)
+			}
+		}
+	}
+
+	var tableLines []string
+	tableLines = append(tableLines, "| Problem | Language | Solution |")
+	tableLines = append(tableLines, "| :--- | :--- | :--- |")
+	for _, it := range items {
+		link := fmt.Sprintf("[%s](https://leetcode.com/problems/%s/)", it.Title, it.Slug)
+		solLink := fmt.Sprintf("[Code](./%s)", it.Path)
+		tableLines = append(tableLines, fmt.Sprintf("| %s | %s | %s |", link, it.Lang, solLink))
+	}
 
 	solvcommitSection := fmt.Sprintf(`%s
 ---
 ### ⚡ Automated with [SolvCommit](https://github.com/enftaurus/solvcommit)
-- **Latest Synced**: [%s](%s) (%s)
-- **Solutions Synced**: %d
+
+- **Total Solutions Synced**: %d
+- **Latest Synced**: [%s](https://leetcode.com/problems/%s/) (%s)
+
+#### 📝 Synced Solutions
+%s
 
 > *Continuous LeetCode publishing powered by SolvCommit.*
-%s`, markerStart, msg.ProblemTitle, msg.ProblemSlug, msg.Language, count, markerEnd)
+%s`, markerStart, len(items), msg.ProblemTitle, msg.ProblemSlug, msg.Language, strings.Join(tableLines, "\n"), markerEnd)
 
 	existing, err := w.github.GetFile(ctx, instID, owner, repo, "README.md")
-	if errors.Is(err, github.ErrFileNotFound) || existing == nil {
-		initial := fmt.Sprintf("# %s\n\nPersonal LeetCode solutions repository.\n\n%s\n", repo, solvcommitSection)
-		_, _ = w.github.PutFile(ctx, instID, owner, repo, "README.md", initial, "chore: initialize README with SolvCommit badge", branch)
+	if err != nil {
+		if errors.Is(err, github.ErrFileNotFound) {
+			initial := fmt.Sprintf("# %s\n\nPersonal LeetCode solutions repository.\n\n%s\n", repo, solvcommitSection)
+			_, putErr := w.github.PutFile(ctx, instID, owner, repo, "README.md", initial, "chore: initialize README with SolvCommit badge", branch)
+			if putErr != nil {
+				w.logger.Error("failed to create initial README", "error", putErr)
+			}
+			return
+		}
+		w.logger.Error("failed to fetch existing README", "error", err)
 		return
 	}
 
@@ -213,7 +256,12 @@ func (w *Worker) ensureReadmeBadge(ctx context.Context, instID int64, owner, rep
 	}
 
 	if newContent != content {
-		_, _ = w.github.PutFile(ctx, instID, owner, repo, "README.md", newContent, "docs: update SolvCommit sync badge in README", branch)
+		_, updateErr := w.github.UpdateFile(ctx, instID, owner, repo, "README.md", newContent, "docs: update SolvCommit sync badge in README", branch, existing.SHA)
+		if updateErr != nil {
+			w.logger.Error("failed to update README badge", "error", updateErr)
+		} else {
+			w.logger.Info("README updated successfully with SolvCommit sync badge", "repo", repo)
+		}
 	}
 }
 

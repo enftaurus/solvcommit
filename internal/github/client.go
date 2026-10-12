@@ -53,6 +53,7 @@ type Client interface {
 	ListRepositories(ctx context.Context, installationID int64) ([]RepositoryInfo, error)
 	GetFile(ctx context.Context, installationID int64, owner, repo, path string) (*FileInfo, error)
 	PutFile(ctx context.Context, installationID int64, owner, repo, path, content, commitMsg, branch string) (*CommitResult, error)
+	UpdateFile(ctx context.Context, installationID int64, owner, repo, path, content, commitMsg, branch, fileSHA string) (*CommitResult, error)
 	VerifyRepoWrite(ctx context.Context, installationID int64, owner, repo string) error
 	CreateRepository(ctx context.Context, installationID int64, name, description string, isPrivate bool) (*RepositoryInfo, error)
 }
@@ -382,6 +383,72 @@ func (c *GitHubAppClient) PutFile(ctx context.Context, installationID int64, own
 			return nil, ErrPathConflict
 		}
 		return nil, fmt.Errorf("failed to commit file to github (%d): %s", res.StatusCode, string(respBody))
+	}
+
+	var resp struct {
+		Content struct {
+			SHA string `json:"sha"`
+		} `json:"content"`
+		Commit struct {
+			SHA string `json:"sha"`
+		} `json:"commit"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
+		return nil, err
+	}
+
+	return &CommitResult{
+		CommitSHA:  resp.Commit.SHA,
+		ContentSHA: resp.Content.SHA,
+	}, nil
+}
+
+// UpdateFile updates an existing file in repository via GitHub Contents API with existing blob SHA
+func (c *GitHubAppClient) UpdateFile(ctx context.Context, installationID int64, owner, repo, path, content, commitMsg, branch, fileSHA string) (*CommitResult, error) {
+	token, err := c.GetInstallationToken(ctx, installationID)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("%s/repos/%s/%s/contents/%s", c.baseURL, owner, repo, path)
+
+	reqPayload := map[string]interface{}{
+		"message": commitMsg,
+		"content": base64.StdEncoding.EncodeToString([]byte(content)),
+		"sha":     fileSHA,
+	}
+	if branch != "" {
+		reqPayload["branch"] = branch
+	}
+
+	bodyBytes, err := json.Marshal(reqPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusCreated && res.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(res.Body)
+		if res.StatusCode == http.StatusForbidden {
+			return nil, ErrPermissionDenied
+		}
+		if res.StatusCode == http.StatusConflict {
+			return nil, ErrPathConflict
+		}
+		return nil, fmt.Errorf("failed to update file in github (%d): %s", res.StatusCode, string(respBody))
 	}
 
 	var resp struct {
