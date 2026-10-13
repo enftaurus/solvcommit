@@ -5,8 +5,7 @@
   "description": "Publishes every accepted LeetCode submission to your GitHub repository.",
   "permissions": [
     "storage",
-    "alarms",
-    "cookies"
+    "alarms"
   ],
   "host_permissions": [
     "https://leetcode.com/*",

@@ -66,11 +66,11 @@ func main() {
 	}
 	var ghAppClient github.Client
 	if ghAppID != "" && len(ghAppPEM) > 0 {
-		c, err := github.NewClient(ghAppID, ghAppPEM, "")
-		if err != nil {
-			logger.Warn("Failed to initialize GitHub App client", "error", err)
+		concreteClient, clientErr := github.NewClient(ghAppID, ghAppPEM, "")
+		if clientErr != nil {
+			logger.Warn("Failed to initialize GitHub App client", "error", clientErr)
 		} else {
-			ghAppClient = c
+			ghAppClient = concreteClient
 		}
 	}
 	repoSvc := repositories.NewService(db.Pool, ghAppClient)

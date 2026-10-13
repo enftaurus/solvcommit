@@ -36,11 +36,17 @@ func TestConfigLoadDefaults(t *testing.T) {
 func TestConfigCustomEnv(t *testing.T) {
 	os.Setenv("APP_ENV", "production")
 	os.Setenv("SESSION_SECRET", "super-secret-random-production-key-at-least-32-bytes")
+	os.Setenv("PUBLIC_URL", "https://solvcommit.dev")
+	os.Setenv("GITHUB_APP_ID", "12345")
+	os.Setenv("GITHUB_APP_PRIVATE_KEY_PATH", "/path/to/key.pem")
 	os.Setenv("HTTP_ADDR", ":9000")
 	os.Setenv("KAFKA_BROKERS", "broker1:9092,broker2:9092")
 	defer func() {
 		os.Unsetenv("APP_ENV")
 		os.Unsetenv("SESSION_SECRET")
+		os.Unsetenv("PUBLIC_URL")
+		os.Unsetenv("GITHUB_APP_ID")
+		os.Unsetenv("GITHUB_APP_PRIVATE_KEY_PATH")
 		os.Unsetenv("HTTP_ADDR")
 		os.Unsetenv("KAFKA_BROKERS")
 	}()
@@ -64,7 +70,15 @@ func TestConfigCustomEnv(t *testing.T) {
 func TestConfigProductionRejectsDefaultSecret(t *testing.T) {
 	os.Setenv("APP_ENV", "production")
 	os.Unsetenv("SESSION_SECRET")
-	defer os.Unsetenv("APP_ENV")
+	os.Setenv("PUBLIC_URL", "https://solvcommit.dev")
+	os.Setenv("GITHUB_APP_ID", "12345")
+	os.Setenv("GITHUB_APP_PRIVATE_KEY_PATH", "/path/to/key.pem")
+	defer func() {
+		os.Unsetenv("APP_ENV")
+		os.Unsetenv("PUBLIC_URL")
+		os.Unsetenv("GITHUB_APP_ID")
+		os.Unsetenv("GITHUB_APP_PRIVATE_KEY_PATH")
+	}()
 
 	_, err := config.Load()
 	if err == nil {
@@ -72,12 +86,37 @@ func TestConfigProductionRejectsDefaultSecret(t *testing.T) {
 	}
 }
 
-func TestConfigProductionRejectsShortSecret(t *testing.T) {
+func TestConfigProductionRejectsMissingAppID(t *testing.T) {
 	os.Setenv("APP_ENV", "production")
-	os.Setenv("SESSION_SECRET", "too-short")
+	os.Setenv("SESSION_SECRET", "super-secret-random-production-key-at-least-32-bytes")
+	os.Setenv("PUBLIC_URL", "https://solvcommit.dev")
+	os.Unsetenv("GITHUB_APP_ID")
+	os.Setenv("GITHUB_APP_PRIVATE_KEY_PATH", "/path/to/key.pem")
 	defer func() {
 		os.Unsetenv("APP_ENV")
 		os.Unsetenv("SESSION_SECRET")
+		os.Unsetenv("PUBLIC_URL")
+		os.Unsetenv("GITHUB_APP_PRIVATE_KEY_PATH")
+	}()
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatalf("expected error when starting production with missing GITHUB_APP_ID, got nil")
+	}
+}
+
+func TestConfigProductionRejectsShortSecret(t *testing.T) {
+	os.Setenv("APP_ENV", "production")
+	os.Setenv("SESSION_SECRET", "too-short")
+	os.Setenv("PUBLIC_URL", "https://solvcommit.dev")
+	os.Setenv("GITHUB_APP_ID", "12345")
+	os.Setenv("GITHUB_APP_PRIVATE_KEY_PATH", "/path/to/key.pem")
+	defer func() {
+		os.Unsetenv("APP_ENV")
+		os.Unsetenv("SESSION_SECRET")
+		os.Unsetenv("PUBLIC_URL")
+		os.Unsetenv("GITHUB_APP_ID")
+		os.Unsetenv("GITHUB_APP_PRIVATE_KEY_PATH")
 	}()
 
 	_, err := config.Load()

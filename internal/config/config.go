@@ -16,9 +16,11 @@ type Config struct {
 	KafkaBrokers  []string
 	KafkaTopic    string
 	SessionSecret string
-	MaxCodeBytes  int64
-	GitHubAppSlug string
-	PublicURL     string
+	MaxCodeBytes         int64
+	GitHubAppSlug        string
+	PublicURL            string
+	GitHubAppID          string
+	GitHubAppKeyPath     string
 }
 
 // devSessionSecret is the insecure default used only in development.
@@ -30,14 +32,16 @@ func Load() (*Config, error) {
 	loadDotEnv(".env")
 
 	cfg := &Config{
-		AppEnv:        getEnv("APP_ENV", "development"),
-		HTTPAddr:      getEnv("HTTP_ADDR", ":8080"),
-		DatabaseURL:   getEnv("DATABASE_URL", "postgres://leetsync:change-me@localhost:5432/leetsync?sslmode=disable"),
-		KafkaTopic:    getEnv("KAFKA_TOPIC_SUBMISSIONS", "submissions"),
-		SessionSecret: getEnv("SESSION_SECRET", devSessionSecret),
-		MaxCodeBytes:  int64(getEnvInt("MAX_CODE_BYTES", 262144)), // 256 KB default
-		GitHubAppSlug: getEnv("GITHUB_APP_SLUG", ""),
-		PublicURL:     strings.TrimRight(getEnv("PUBLIC_URL", "http://localhost:8080"), "/"),
+		AppEnv:           getEnv("APP_ENV", "development"),
+		HTTPAddr:         getEnv("HTTP_ADDR", ":8080"),
+		DatabaseURL:      getEnv("DATABASE_URL", "postgres://leetsync:change-me@localhost:5432/leetsync?sslmode=disable"),
+		KafkaTopic:       getEnv("KAFKA_TOPIC_SUBMISSIONS", "submissions"),
+		SessionSecret:    getEnv("SESSION_SECRET", devSessionSecret),
+		MaxCodeBytes:     int64(getEnvInt("MAX_CODE_BYTES", 262144)), // 256 KB default
+		GitHubAppSlug:    getEnv("GITHUB_APP_SLUG", ""),
+		PublicURL:        strings.TrimRight(getEnv("PUBLIC_URL", "http://localhost:8080"), "/"),
+		GitHubAppID:      getEnv("GITHUB_APP_ID", ""),
+		GitHubAppKeyPath: getEnv("GITHUB_APP_PRIVATE_KEY_PATH", ""),
 	}
 
 	brokersStr := getEnv("KAFKA_BROKERS", "localhost:9092")
@@ -53,10 +57,19 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("KAFKA_BROKERS is required")
 	}
 
-	// Issue 7: reject weak/default SESSION_SECRET in production
+	// In production, enforce critical security and infrastructure configurations
 	if cfg.AppEnv == "production" {
 		if cfg.SessionSecret == devSessionSecret || len(cfg.SessionSecret) < 32 {
 			return nil, fmt.Errorf("SESSION_SECRET must be a strong random value (>=32 bytes) in production; refusing to start with dev default")
+		}
+		if cfg.PublicURL == "" {
+			return nil, fmt.Errorf("PUBLIC_URL is required in production")
+		}
+		if cfg.GitHubAppID == "" {
+			return nil, fmt.Errorf("GITHUB_APP_ID is required in production")
+		}
+		if cfg.GitHubAppKeyPath == "" {
+			return nil, fmt.Errorf("GITHUB_APP_PRIVATE_KEY_PATH is required in production")
 		}
 	}
 
