@@ -45,10 +45,6 @@ func (m *mockGitHubClient) UpdateFile(ctx context.Context, installationID int64,
 	return &github.CommitResult{CommitSHA: "commit-123", ContentSHA: "blob-123"}, nil
 }
 
-func (m *mockGitHubClient) CreateRepository(ctx context.Context, installationID int64, name, description string, isPrivate bool) (*github.RepositoryInfo, error) {
-	return &github.RepositoryInfo{ID: 100, Owner: "octocat", Name: name}, nil
-}
-
 func (m *mockGitHubClient) VerifyRepoWrite(ctx context.Context, installationID int64, owner, repo string) error {
 	if m.verifyFunc != nil {
 		return m.verifyFunc(ctx, installationID, owner, repo)

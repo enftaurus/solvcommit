@@ -66,7 +66,6 @@ type RepositoryManager interface {
 	GetSelected(ctx context.Context, userID string) (*repositories.Repository, error)
 	UpdateSelected(ctx context.Context, userID string, defaultBranch string) (*repositories.Repository, error)
 	VerifySelected(ctx context.Context, userID string) error
-	CreateAndSelectDefaultRepo(ctx context.Context, userID, repoName string) (*repositories.Repository, error)
 }
 
 // Handler holds dependencies for API endpoints
@@ -109,7 +108,6 @@ func NewRouter(h *Handler) http.Handler {
 	// Repositories (Phase 4: GitHub Publishing & Repositories)
 	mux.HandleFunc("GET /api/v1/github/repositories", h.requireUserSession(h.handleListGitHubRepos))
 	mux.HandleFunc("POST /api/v1/repositories", h.requireUserSession(h.handleSelectRepository))
-	mux.HandleFunc("POST /api/v1/repositories/create-default", h.requireUserSession(h.handleCreateDefaultRepository))
 	mux.HandleFunc("GET /api/v1/repositories/selected", h.requireUserSession(h.handleGetSelectedRepository))
 	mux.HandleFunc("PUT /api/v1/repositories/selected", h.requireUserSession(h.handleUpdateSelectedRepository))
 	mux.HandleFunc("POST /api/v1/repositories/verify", h.requireUserSession(h.handleVerifyRepository))
@@ -494,7 +492,8 @@ func (h *Handler) handleListGitHubRepos(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, "github app not connected", http.StatusBadRequest)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Printf("[API ERROR] ListAvailable failed: %v\n", err)
+		http.Error(w, "failed to list repositories", http.StatusInternalServerError)
 		return
 	}
 
@@ -511,7 +510,7 @@ func (h *Handler) handleSelectRepository(w http.ResponseWriter, r *http.Request)
 
 	var req repositories.SelectRepoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -525,35 +524,8 @@ func (h *Handler) handleSelectRepository(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "github app not connected", http.StatusBadRequest)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(repo)
-}
-
-func (h *Handler) handleCreateDefaultRepository(w http.ResponseWriter, r *http.Request) {
-	if h.Repositories == nil {
-		http.Error(w, "repository service unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	userID := r.Context().Value(userIDKey).(string)
-
-	var req struct {
-		Name string `json:"name"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
-
-	repo, err := h.Repositories.CreateAndSelectDefaultRepo(r.Context(), userID, req.Name)
-	if err != nil {
-		fmt.Printf("[API ERROR] CreateAndSelectDefaultRepo failed: %v\n", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error(),
-		})
+		fmt.Printf("[API ERROR] SelectRepository failed: %v\n", err)
+		http.Error(w, "failed to select repository", http.StatusInternalServerError)
 		return
 	}
 
@@ -575,7 +547,8 @@ func (h *Handler) handleGetSelectedRepository(w http.ResponseWriter, r *http.Req
 			http.Error(w, "no active repository selected", http.StatusNotFound)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Printf("[API ERROR] GetSelected failed: %v\n", err)
+		http.Error(w, "failed to get selected repository", http.StatusInternalServerError)
 		return
 	}
 
@@ -604,7 +577,8 @@ func (h *Handler) handleUpdateSelectedRepository(w http.ResponseWriter, r *http.
 			http.Error(w, "no active repository selected", http.StatusNotFound)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Printf("[API ERROR] UpdateSelected failed: %v\n", err)
+		http.Error(w, "failed to update repository", http.StatusInternalServerError)
 		return
 	}
 
@@ -628,7 +602,8 @@ func (h *Handler) handleVerifyRepository(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "no active repository selected", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "verification failed: "+err.Error(), http.StatusInternalServerError)
+		fmt.Printf("[API ERROR] VerifySelected failed: %v\n", err)
+		http.Error(w, "failed to verify repository", http.StatusInternalServerError)
 		return
 	}
 

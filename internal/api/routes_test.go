@@ -223,18 +223,6 @@ func (m *mockRepositoryManager) VerifySelected(ctx context.Context, userID strin
 	return nil
 }
 
-func (m *mockRepositoryManager) CreateAndSelectDefaultRepo(ctx context.Context, userID, repoName string) (*repositories.Repository, error) {
-	return &repositories.Repository{
-		ID:            "repo-default",
-		UserID:        userID,
-		GitHubRepoID:  999,
-		Owner:         "octocat",
-		Name:          repoName,
-		DefaultBranch: "main",
-		Status:        "active",
-	}, nil
-}
-
 type mockGitHubClient struct {
 	authURLFunc  func(state, redirectURI string) string
 	exchangeFunc func(ctx context.Context, code string) (*auth.GitHubUserInfo, error)
@@ -886,6 +874,24 @@ func TestRepositoryEndpoints(t *testing.T) {
 	router.ServeHTTP(verRec, verReq)
 	if verRec.Code != http.StatusOK {
 		t.Fatalf("expected 200 on verify repo, got %d", verRec.Code)
+	}
+
+	// 6. Verify error responses do not leak raw internal error text (Task 3 step 5)
+	mockRepos.listFunc = func(ctx context.Context, userID string) ([]github.RepositoryInfo, error) {
+		return nil, errors.New("sql: sensitive connection string or db error detail")
+	}
+	errListReq := httptest.NewRequest(http.MethodGet, "/api/v1/github/repositories", nil)
+	errListReq.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	errListRec := httptest.NewRecorder()
+	router.ServeHTTP(errListRec, errListReq)
+	if errListRec.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", errListRec.Code)
+	}
+	if strings.Contains(errListRec.Body.String(), "sensitive") {
+		t.Errorf("leaked internal error text in response: %s", errListRec.Body.String())
+	}
+	if !strings.Contains(errListRec.Body.String(), "failed to list repositories") {
+		t.Errorf("expected clean message 'failed to list repositories', got: %s", errListRec.Body.String())
 	}
 }
 

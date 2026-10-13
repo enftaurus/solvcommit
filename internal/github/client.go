@@ -55,7 +55,6 @@ type Client interface {
 	PutFile(ctx context.Context, installationID int64, owner, repo, path, content, commitMsg, branch string) (*CommitResult, error)
 	UpdateFile(ctx context.Context, installationID int64, owner, repo, path, content, commitMsg, branch, fileSHA string) (*CommitResult, error)
 	VerifyRepoWrite(ctx context.Context, installationID int64, owner, repo string) error
-	CreateRepository(ctx context.Context, installationID int64, name, description string, isPrivate bool) (*RepositoryInfo, error)
 }
 
 type cachedToken struct {
@@ -522,70 +521,4 @@ func (c *GitHubAppClient) VerifyRepoWrite(ctx context.Context, installationID in
 	// If the user's installation can access the repo (GET /repos/:owner/:repo returned 200),
 	// and Contents write is granted to the App, allow it.
 	return nil
-}
-
-// CreateRepository creates a new repository under user/org installation
-func (c *GitHubAppClient) CreateRepository(ctx context.Context, installationID int64, name, description string, isPrivate bool) (*RepositoryInfo, error) {
-	token, err := c.GetInstallationToken(ctx, installationID)
-	if err != nil {
-		return nil, err
-	}
-
-	url := fmt.Sprintf("%s/user/repos", c.baseURL)
-	payload := map[string]interface{}{
-		"name":        name,
-		"description": description,
-		"private":     isPrivate,
-		"auto_init":   true, // Automatically create initial commit with README
-	}
-
-	bodyBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("Content-Type", "application/json")
-
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusCreated && res.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("failed to create github repository (%d): %s", res.StatusCode, string(respBody))
-	}
-
-	var created struct {
-		ID            int64  `json:"id"`
-		Name          string `json:"name"`
-		DefaultBranch string `json:"default_branch"`
-		Private       bool   `json:"private"`
-		Owner         struct {
-			Login string `json:"login"`
-		} `json:"owner"`
-	}
-	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
-		return nil, err
-	}
-
-	branch := created.DefaultBranch
-	if branch == "" {
-		branch = "main"
-	}
-
-	return &RepositoryInfo{
-		ID:            created.ID,
-		Owner:         created.Owner.Login,
-		Name:          created.Name,
-		DefaultBranch: branch,
-		Private:       created.Private,
-	}, nil
 }

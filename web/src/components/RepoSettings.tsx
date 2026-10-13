@@ -82,27 +82,12 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
     }
   };
 
-  const [isCreatingDefault, setIsCreatingDefault] = useState(false);
+  const [isRefreshingRepos, setIsRefreshingRepos] = useState(false);
 
-  const handleCreateDefaultRepo = async () => {
-    setIsCreatingDefault(true);
-    setVerifyMessage(null);
-    try {
-      const newRepo = await api.createDefaultRepo("solvcommit-leetcode");
-      setVerifyMessage({
-        success: true,
-        text: `Created and linked default repository ${newRepo.owner}/${newRepo.name} with automated SolvCommit README!`,
-      });
-      await loadAvailableRepos();
-      onRepoUpdated();
-    } catch (err: any) {
-      setVerifyMessage({
-        success: false,
-        text: "Could not create default repository: " + err.message,
-      });
-    } finally {
-      setIsCreatingDefault(false);
-    }
+  const handleRefreshList = async () => {
+    setIsRefreshingRepos(true);
+    await loadAvailableRepos();
+    setIsRefreshingRepos(false);
   };
 
   const handleVerify = async () => {
@@ -271,7 +256,7 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
               />
             </div>
 
-            <div className="pt-2 flex items-center gap-3">
+            <div className="pt-2 flex flex-wrap items-center gap-3">
               <button
                 onClick={handleSaveRepo}
                 disabled={isLoading}
@@ -281,32 +266,67 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
                 <span>{isLoading ? "Saving..." : "Save Destination"}</span>
               </button>
 
-              <button
-                onClick={handleCreateDefaultRepo}
-                disabled={isCreatingDefault}
+              <a
+                href="https://github.com/new?name=solvcommit-leetcode&description=LeetCode%20solutions%20synced%20by%20SolvCommit&visibility=private"
+                target="_blank"
+                rel="noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <span>{isCreatingDefault ? "Creating Repo..." : "Create New 'solvcommit-leetcode'"}</span>
+                <span>Create 'solvcommit-leetcode' on GitHub</span>
+                <ExternalLink className="h-3 w-3 text-zinc-400" />
+              </a>
+
+              <button
+                onClick={handleRefreshList}
+                disabled={isRefreshingRepos}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingRepos ? "animate-spin text-zinc-400" : "text-zinc-600"}`} />
+                <span>I created it, refresh list</span>
               </button>
             </div>
+            <p className="text-[11px] text-zinc-400 pt-1">
+              Choose "All repositories" when installing the app, or add the new repo to the installation at{" "}
+              <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="underline hover:text-zinc-600">
+                github.com/settings/installations
+              </a>
+              , otherwise it will not appear in the list.
+            </p>
           </div>
         ) : (
           <div className="rounded-lg bg-zinc-50 p-5 text-xs text-zinc-600 border border-zinc-200/60 space-y-3">
             <div className="font-medium text-zinc-800">No destination repository selected yet.</div>
             <p className="text-zinc-500">
-              You can instantly create a brand new repository initialized with SolvCommit, or install the app on an existing repo.
+              Create a new repository for your solutions on GitHub, then refresh the list.
             </p>
-            <div className="pt-1">
-              <button
-                onClick={handleCreateDefaultRepo}
-                disabled={isCreatingDefault}
+            <div className="pt-1 flex flex-wrap items-center gap-3">
+              <a
+                href="https://github.com/new?name=solvcommit-leetcode&description=LeetCode%20solutions%20synced%20by%20SolvCommit&visibility=private"
+                target="_blank"
+                rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800 active:scale-95 transition"
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                <span>{isCreatingDefault ? "Creating & Initializing..." : "Create Default Repository (solvcommit-leetcode)"}</span>
+                <span>Create 'solvcommit-leetcode' on GitHub</span>
+                <ExternalLink className="h-3 w-3 text-zinc-300" />
+              </a>
+              <button
+                onClick={handleRefreshList}
+                disabled={isRefreshingRepos}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingRepos ? "animate-spin text-zinc-400" : "text-zinc-600"}`} />
+                <span>I created it, refresh list</span>
               </button>
             </div>
+            <p className="text-[11px] text-zinc-400 pt-1">
+              Choose "All repositories" when installing the app, or add the new repo to the installation at{" "}
+              <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="underline hover:text-zinc-600">
+                github.com/settings/installations
+              </a>
+              , otherwise it will not appear in the list.
+            </p>
           </div>
         )}
       </div>
