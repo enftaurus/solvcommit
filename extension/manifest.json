@@ -15,7 +15,7 @@
   ],
   "background": {
     "service_worker": "background.js",
-    "scripts": ["queue.js", "background.js"]
+    "scripts": ["config.js", "queue.js", "background.js"]
   },
   "browser_specific_settings": {
     "gecko": {
@@ -40,6 +40,17 @@
       ],
       "js": [
         "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost:8080/connect-extension*",
+        "http://127.0.0.1:8080/connect-extension*",
+        "http://localhost:3000/connect-extension*"
+      ],
+      "js": [
+        "portal-bridge.js"
       ],
       "run_at": "document_idle"
     }

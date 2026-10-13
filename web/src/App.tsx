@@ -21,6 +21,7 @@ import { SessionsManager } from "./components/SessionsManager";
 import { AccountSettings } from "./components/AccountSettings";
 import { LandingPage } from "./components/LandingPage";
 import { PairModal } from "./components/PairModal";
+import { ConnectExtension } from "./components/ConnectExtension";
 import {
   demoUser,
   demoRepo,
@@ -216,9 +217,27 @@ export const App: React.FC = () => {
     );
   }
 
-  // Unauthenticated landing page
+  // Handle /connect-extension route
+  const isConnectExtensionRoute = window.location.pathname.startsWith("/connect-extension");
+
+  // Unauthenticated: if accessing /connect-extension, save path and query in sessionStorage
   if (!user) {
+    if (isConnectExtensionRoute) {
+      sessionStorage.setItem("redirect_after_login", window.location.pathname + window.location.search);
+    }
     return <LandingPage onEnterDemo={handleEnterDemo} />;
+  }
+
+  // Resume saved redirect path after login if present
+  const savedRedirect = sessionStorage.getItem("redirect_after_login");
+  if (savedRedirect) {
+    sessionStorage.removeItem("redirect_after_login");
+    window.location.href = savedRedirect;
+    return null;
+  }
+
+  if (isConnectExtensionRoute) {
+    return <ConnectExtension onGoToDashboard={() => { window.location.href = "/"; }} />;
   }
 
   const activeDeviceCount = devices.filter((d) => !d.revoked_at).length;

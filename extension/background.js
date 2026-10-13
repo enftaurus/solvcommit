@@ -1,12 +1,17 @@
 // LeetSync Background Service Worker (Manifest V3 - Cross-browser: Chrome & Firefox)
 // Manages authentication tokens, offline submission queue, periodic retry, and backfill.
 
-if (typeof OfflineQueue === "undefined" && typeof importScripts === "function") {
-  importScripts("queue.js");
+if (typeof importScripts === "function") {
+  if (typeof WEB_BASE === "undefined") {
+    try { importScripts("config.js"); } catch (e) {}
+  }
+  if (typeof OfflineQueue === "undefined") {
+    try { importScripts("queue.js"); } catch (e) {}
+  }
 }
 
 const extAPI = typeof browser !== "undefined" ? browser : chrome;
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = typeof WEB_BASE !== "undefined" ? WEB_BASE : "http://localhost:8080";
 
 const storageAdapter = {
   get: (key) => new Promise((resolve) => extAPI.storage.local.get(key, resolve)),
@@ -175,6 +180,57 @@ extAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
         paired_at: new Date().toISOString()
       });
       sendResponse({ success: true });
+    })();
+    return true;
+  }
+
+  if (request.action === "PAIR_FROM_PORTAL") {
+    (async () => {
+      try {
+        const payload = request.payload || {};
+        const senderUrl = sender.url || "";
+        let senderOrigin = "";
+        try {
+          senderOrigin = new URL(senderUrl).origin;
+        } catch (e) {
+          return sendResponse({ ok: false, error: "invalid sender url" });
+        }
+
+        const expectedOrigin = new URL(API_BASE_URL).origin;
+        if (senderOrigin !== expectedOrigin) {
+          return sendResponse({ ok: false, error: "origin mismatch" });
+        }
+
+        const stored = await storageAdapter.get(["pair_state", "pair_state_exp"]);
+        if (!stored.pair_state || stored.pair_state !== payload.state) {
+          return sendResponse({ ok: false, error: "state mismatch or missing" });
+        }
+
+        if (!stored.pair_state_exp || stored.pair_state_exp < Date.now()) {
+          return sendResponse({ ok: false, error: "pairing state expired" });
+        }
+
+        const deviceID = payload.deviceID || payload.device_id;
+        const accessToken = payload.accessToken || payload.access_token;
+        const refreshToken = payload.refreshToken || payload.refresh_token;
+
+        if (!deviceID || !accessToken || !refreshToken) {
+          return sendResponse({ ok: false, error: "missing pairing credentials" });
+        }
+
+        await storageAdapter.set({
+          device_id: deviceID,
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          paired_at: new Date().toISOString(),
+          pair_state: null,
+          pair_state_exp: null
+        });
+
+        sendResponse({ ok: true });
+      } catch (err) {
+        sendResponse({ ok: false, error: err.message });
+      }
     })();
     return true;
   }
