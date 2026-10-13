@@ -222,6 +222,18 @@ func (m *mockRepositoryManager) VerifySelected(ctx context.Context, userID strin
 	return nil
 }
 
+func (m *mockRepositoryManager) CreateAndSelectDefaultRepo(ctx context.Context, userID, repoName string) (*repositories.Repository, error) {
+	return &repositories.Repository{
+		ID:            "repo-default",
+		UserID:        userID,
+		GitHubRepoID:  999,
+		Owner:         "octocat",
+		Name:          repoName,
+		DefaultBranch: "main",
+		Status:        "active",
+	}, nil
+}
+
 type mockGitHubClient struct {
 	authURLFunc  func(state, redirectURI string) string
 	exchangeFunc func(ctx context.Context, code string) (*auth.GitHubUserInfo, error)
@@ -238,7 +250,13 @@ func (m *mockGitHubClient) ExchangeCode(ctx context.Context, code string) (*auth
 	if m.exchangeFunc != nil {
 		return m.exchangeFunc(ctx, code)
 	}
-	return &auth.GitHubUserInfo{GitHubUserID: 12345, Login: "octocat", InstallationID: 6789}, nil
+	return &auth.GitHubUserInfo{
+		GitHubUserID: 12345,
+		Login:        "octocat",
+		Installations: []auth.Installation{
+			{ID: 6789, Login: "octocat"},
+		},
+	}, nil
 }
 
 func testSecret() []byte {
@@ -282,8 +300,15 @@ func TestHealthReady_Healthy(t *testing.T) {
 }
 
 func TestGitHubOAuthFlow(t *testing.T) {
+	var savedGhID, savedInstID int64
 	mockGH := &mockGitHubClient{}
-	mockUsers := &mockUserManager{}
+	mockUsers := &mockUserManager{
+		upsertFunc: func(ctx context.Context, ghID, instID int64) (string, error) {
+			savedGhID = ghID
+			savedInstID = instID
+			return "user-mock-123", nil
+		},
+	}
 	h := &api.Handler{
 		GitHub:        mockGH,
 		Users:         mockUsers,
@@ -313,28 +338,59 @@ func TestGitHubOAuthFlow(t *testing.T) {
 		t.Fatalf("expected leetsync_oauth_state cookie to be set")
 	}
 
-	// Step 2: Callback with invalid state -> 400 Bad Request (FR-AUTH-01)
+	// Step 2a: Callback with wrong state -> 400 Bad Request
 	badCbReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?state=wrong&code=123", nil)
 	badCbReq.AddCookie(stateCookie)
 	badCbRec := httptest.NewRecorder()
 	router.ServeHTTP(badCbRec, badCbReq)
-
 	if badCbRec.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 on invalid state, got %d", badCbRec.Code)
 	}
 
-	// Step 3: Callback with valid state -> sets session cookie (FR-AUTH-03)
-	goodCbReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?state="+stateCookie.Value+"&code=123", nil)
-	goodCbReq.AddCookie(stateCookie)
-	goodCbRec := httptest.NewRecorder()
-	router.ServeHTTP(goodCbRec, goodCbReq)
+	// Step 2b: Callback with missing state cookie -> 400 Bad Request
+	noCookieReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?state="+stateCookie.Value+"&code=123", nil)
+	noCookieRec := httptest.NewRecorder()
+	router.ServeHTTP(noCookieRec, noCookieReq)
+	if noCookieRec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 on missing state cookie, got %d", noCookieRec.Code)
+	}
 
-	if goodCbRec.Code != http.StatusOK {
-		t.Fatalf("expected 200 on valid callback, got %d", goodCbRec.Code)
+	// Step 2c: Callback with empty code -> 400 Bad Request
+	emptyCodeReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?state="+stateCookie.Value, nil)
+	emptyCodeReq.AddCookie(stateCookie)
+	emptyCodeRec := httptest.NewRecorder()
+	router.ServeHTTP(emptyCodeRec, emptyCodeReq)
+	if emptyCodeRec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 on empty code, got %d", emptyCodeRec.Code)
+	}
+
+	// Step 2d: Callback with installation_id in URL but missing state cookie -> 400 (no bypass!)
+	bypassReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?installation_id=9999&code=123", nil)
+	bypassRec := httptest.NewRecorder()
+	router.ServeHTTP(bypassRec, bypassReq)
+	if bypassRec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 on installation_id without valid state, got %d", bypassRec.Code)
+	}
+
+	// Step 3: Callback with untrusted installation_id (not in user's installations)
+	// User only has installation 6789; query param has 99999. Must store 6789, NOT 99999!
+	untrustedReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?state="+stateCookie.Value+"&code=123&installation_id=99999", nil)
+	untrustedReq.AddCookie(stateCookie)
+	untrustedRec := httptest.NewRecorder()
+	router.ServeHTTP(untrustedRec, untrustedReq)
+
+	if untrustedRec.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("expected 307 redirect, got %d: %s", untrustedRec.Code, untrustedRec.Body.String())
+	}
+	if savedGhID != 12345 {
+		t.Errorf("expected githubUserID 12345, got %d", savedGhID)
+	}
+	if savedInstID != 6789 {
+		t.Errorf("security violation: expected stored installation 6789, got %d", savedInstID)
 	}
 
 	var sessionCookie *http.Cookie
-	for _, c := range goodCbRec.Result().Cookies() {
+	for _, c := range untrustedRec.Result().Cookies() {
 		if c.Name == "leetsync_session" {
 			sessionCookie = c
 			break

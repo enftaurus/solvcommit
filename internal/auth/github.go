@@ -4,17 +4,51 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 )
 
-// GitHubUserInfo contains verified identity from GitHub
+// Installation represents an authorized installation returned by GitHub
+type Installation struct {
+	ID    int64  `json:"id"`
+	Login string `json:"login"`
+}
+
+// GitHubUserInfo contains verified identity and accessible installations from GitHub
 type GitHubUserInfo struct {
-	GitHubUserID   int64  `json:"id"`
-	Login          string `json:"login"`
-	InstallationID int64  `json:"installation_id"`
+	GitHubUserID  int64          `json:"id"`
+	Login         string         `json:"login"`
+	Installations []Installation `json:"installations"`
+}
+
+// PickInstallation selects the most appropriate installation ID:
+// returns wanted if it is in info.Installations;
+// otherwise the installation whose Login equals the user's login (case-insensitive);
+// otherwise the first one;
+// otherwise 0.
+func PickInstallation(info *GitHubUserInfo, wanted int64) int64 {
+	if info == nil {
+		return 0
+	}
+	if wanted > 0 {
+		for _, inst := range info.Installations {
+			if inst.ID == wanted {
+				return wanted
+			}
+		}
+	}
+	for _, inst := range info.Installations {
+		if strings.EqualFold(inst.Login, info.Login) && inst.ID > 0 {
+			return inst.ID
+		}
+	}
+	if len(info.Installations) > 0 {
+		return info.Installations[0].ID
+	}
+	return 0
 }
 
 // GitHubClient defines interface for GitHub App OAuth interactions (ponytail: mockable interface)
@@ -92,6 +126,11 @@ func (c *RealGitHubClient) ExchangeCode(ctx context.Context, code string) (*GitH
 	}
 	defer userResp.Body.Close()
 
+	if userResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(userResp.Body)
+		return nil, fmt.Errorf("failed to fetch user profile (%d): %s", userResp.StatusCode, string(body))
+	}
+
 	var userInfo struct {
 		ID    int64  `json:"id"`
 		Login string `json:"login"`
@@ -100,29 +139,49 @@ func (c *RealGitHubClient) ExchangeCode(ctx context.Context, code string) (*GitH
 		return nil, fmt.Errorf("failed to decode user info: %w", err)
 	}
 
-	// 3. Query installation ID for user (optional fallback in dev/test)
-	var installationID int64
+	// 3. Query all user installations from GET /user/installations
 	instReq, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user/installations", nil)
-	if err == nil {
-		instReq.Header.Set("Authorization", "Bearer "+tokenResp.AccessToken)
-		instReq.Header.Set("Accept", "application/vnd.github+json")
-		if instResp, err := c.HTTPClient.Do(instReq); err == nil {
-			var instData struct {
-				Installations []struct {
-					ID int64 `json:"id"`
-				} `json:"installations"`
-			}
-			if json.NewDecoder(instResp.Body).Decode(&instData) == nil && len(instData.Installations) > 0 {
-				installationID = instData.Installations[0].ID
-			}
-			instResp.Body.Close()
-		}
+	if err != nil {
+		return nil, fmt.Errorf("failed to create installations request: %w", err)
+	}
+	instReq.Header.Set("Authorization", "Bearer "+tokenResp.AccessToken)
+	instReq.Header.Set("Accept", "application/vnd.github+json")
+
+	instResp, err := c.HTTPClient.Do(instReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user installations: %w", err)
+	}
+	defer instResp.Body.Close()
+
+	if instResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(instResp.Body)
+		return nil, fmt.Errorf("failed to fetch user installations (%d): %s", instResp.StatusCode, string(body))
 	}
 
-	// D-19: Discard the access token immediately after obtaining user identity
+	var instData struct {
+		Installations []struct {
+			ID      int64 `json:"id"`
+			Account struct {
+				Login string `json:"login"`
+			} `json:"account"`
+		} `json:"installations"`
+	}
+	if err := json.NewDecoder(instResp.Body).Decode(&instData); err != nil {
+		return nil, fmt.Errorf("failed to decode user installations: %w", err)
+	}
+
+	var installations []Installation
+	for _, inst := range instData.Installations {
+		installations = append(installations, Installation{
+			ID:    inst.ID,
+			Login: inst.Account.Login,
+		})
+	}
+
+	// D-19: Discard the access token immediately after obtaining user identity and installations
 	return &GitHubUserInfo{
-		GitHubUserID:   userInfo.ID,
-		Login:          userInfo.Login,
-		InstallationID: installationID,
+		GitHubUserID:  userInfo.ID,
+		Login:         userInfo.Login,
+		Installations: installations,
 	}, nil
 }

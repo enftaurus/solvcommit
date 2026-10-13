@@ -231,6 +231,10 @@ func (h *Handler) handleGitHubStart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
 }
 
+func pickInstallation(info *auth.GitHubUserInfo, wanted int64) int64 {
+	return auth.PickInstallation(info, wanted)
+}
+
 func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	if h.GitHub == nil || h.Users == nil {
 		http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
@@ -239,16 +243,18 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 
 	stateQuery := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
-	installationIDStr := r.URL.Query().Get("installation_id")
 
-	// If this callback comes from GitHub App Installation ("Setup URL" / post-installation),
-	// GitHub does not provide a state parameter. If it's a standard login, verify state.
-	if installationIDStr == "" {
-		stateCookie, err := r.Cookie("leetsync_oauth_state")
-		if err != nil || stateCookie.Value == "" || stateCookie.Value != stateQuery {
-			http.Error(w, "invalid or expired oauth state", http.StatusBadRequest)
-			return
-		}
+	// 1. Always verify the leetsync_oauth_state cookie against the state query parameter
+	stateCookie, err := r.Cookie("leetsync_oauth_state")
+	if err != nil || stateCookie.Value == "" || stateQuery == "" || stateCookie.Value != stateQuery {
+		http.Error(w, "invalid or expired oauth state", http.StatusBadRequest)
+		return
+	}
+
+	// Return 400 if code is empty
+	if code == "" {
+		http.Error(w, "missing code parameter", http.StatusBadRequest)
+		return
 	}
 
 	// Clear state cookie
@@ -261,47 +267,24 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	var githubUserID int64
-	var instID int64
-	if installationIDStr != "" {
-		if parsed, err := strconv.ParseInt(installationIDStr, 10, 64); err == nil {
-			instID = parsed
+	var wantedInstID int64
+	if instStr := r.URL.Query().Get("installation_id"); instStr != "" {
+		if parsed, err := strconv.ParseInt(instStr, 10, 64); err == nil {
+			wantedInstID = parsed
 		}
 	}
 
-	if code != "" {
-		userInfo, err := h.GitHub.ExchangeCode(r.Context(), code)
-		if err != nil {
-			http.Error(w, "failed to exchange github code: "+err.Error(), http.StatusBadGateway)
-			return
-		}
-		githubUserID = userInfo.GitHubUserID
-		if instID == 0 {
-			instID = userInfo.InstallationID
-		}
+	userInfo, err := h.GitHub.ExchangeCode(r.Context(), code)
+	if err != nil {
+		http.Error(w, "failed to exchange github code: "+err.Error(), http.StatusBadGateway)
+		return
 	}
 
-	// If we still don't have githubUserID from code, check existing session cookie
-	var userID string
-	if githubUserID != 0 {
-		var err error
-		userID, err = h.Users.UpsertGitHubUser(r.Context(), githubUserID, instID)
-		if err != nil {
-			http.Error(w, "failed to save user: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else if sessionCookie, err := r.Cookie("leetsync_session"); err == nil && sessionCookie.Value != "" {
-		if payload, err := auth.VerifySessionCookie(h.SessionSecret, sessionCookie.Value); err == nil {
-			userID = payload.UserID
-			// Update installation ID on existing user
-			if instID > 0 {
-				_, _ = h.Users.UpsertGitHubUser(r.Context(), 0, instID)
-			}
-		}
-	}
+	instID := pickInstallation(userInfo, wantedInstID)
 
-	if userID == "" {
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	userID, err := h.Users.UpsertGitHubUser(r.Context(), userInfo.GitHubUserID, instID)
+	if err != nil {
+		http.Error(w, "failed to save user: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
