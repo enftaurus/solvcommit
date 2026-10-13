@@ -193,15 +193,25 @@ extAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
         try {
           senderOrigin = new URL(senderUrl).origin;
         } catch (e) {
+          console.warn("[LeetSync Background] Invalid sender URL:", senderUrl);
           return sendResponse({ ok: false, error: "invalid sender url" });
         }
 
         const expectedOrigin = new URL(API_BASE_URL).origin;
-        if (senderOrigin !== expectedOrigin) {
+        const isAllowedOrigin =
+          senderOrigin === expectedOrigin ||
+          senderOrigin === "http://localhost:8080" ||
+          senderOrigin === "http://127.0.0.1:8080" ||
+          senderOrigin === "http://localhost:3000";
+
+        if (!isAllowedOrigin) {
+          console.warn("[LeetSync Background] Origin mismatch. Sender:", senderOrigin, "Expected:", expectedOrigin);
           return sendResponse({ ok: false, error: "origin mismatch" });
         }
 
         const stored = await storageAdapter.get(["pair_state", "pair_state_exp"]);
+        console.log("[LeetSync Background] PAIR_FROM_PORTAL received. State payload:", payload.state, "Stored state:", stored.pair_state);
+
         if (!stored.pair_state || stored.pair_state !== payload.state) {
           return sendResponse({ ok: false, error: "state mismatch or missing" });
         }

@@ -9,6 +9,7 @@ interface ConnectExtensionProps {
 export const ConnectExtension: React.FC<ConnectExtensionProps> = ({ onGoToDashboard }) => {
   const [status, setStatus] = useState<"connecting" | "paired" | "timeout" | "error">("connecting");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [rawPayload, setRawPayload] = useState<string>("");
   const pairingInitiated = useRef(false);
 
   useEffect(() => {
@@ -52,6 +53,17 @@ export const ConnectExtension: React.FC<ConnectExtensionProps> = ({ onGoToDashbo
     // Call api.pairDevice exactly once
     api.pairDevice("Browser Extension")
       .then((pairData) => {
+        setRawPayload(
+          JSON.stringify(
+            {
+              deviceID: pairData.device_id,
+              accessToken: pairData.access_token,
+              refreshToken: pairData.refresh_token,
+            },
+            null,
+            2
+          )
+        );
         const payload = {
           type: "SOLVCOMMIT_PAIR",
           state: state,
@@ -134,8 +146,29 @@ export const ConnectExtension: React.FC<ConnectExtensionProps> = ({ onGoToDashbo
             </div>
             <h2 className="text-lg font-semibold text-slate-900">Extension Not Detected</h2>
             <p className="text-xs text-slate-600 leading-relaxed">
-              We couldn't connect with the browser extension. Make sure the SolvCommit extension is installed and enabled in your browser.
+              We couldn't connect with the browser extension. If you reloaded the extension or are using a private window, you can copy the credentials below or retry.
             </p>
+            {rawPayload && (
+              <div className="text-left space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-slate-600">Manual Pairing Code:</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(rawPayload);
+                      alert("Copied pairing code! Open popup -> Pair Manually -> paste & connect.");
+                    }}
+                    className="text-[11px] text-blue-600 font-semibold hover:underline"
+                  >
+                    Copy Code
+                  </button>
+                </div>
+                <textarea
+                  readOnly
+                  value={rawPayload}
+                  className="w-full text-[11px] font-mono bg-slate-100 p-2 rounded border border-slate-200 h-20 resize-none select-all"
+                />
+              </div>
+            )}
             <div className="flex flex-col gap-2 pt-2">
               <button
                 onClick={() => window.location.reload()}
