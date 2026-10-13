@@ -13,11 +13,12 @@ import (
 var ErrUserNotFound = errors.New("user not found")
 
 type UserProfile struct {
-	ID             string    `json:"id"`
-	Status         string    `json:"status"`
-	GitHubUserID   int64     `json:"github_user_id"`
-	InstallationID int64     `json:"installation_id"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID                    string    `json:"id"`
+	Status                string    `json:"status"`
+	GitHubUserID          int64     `json:"github_user_id"`
+	InstallationID        int64     `json:"installation_id"`
+	InstallationConnected bool      `json:"installation_connected"`
+	CreatedAt             time.Time `json:"created_at"`
 }
 
 type UserService struct {
@@ -95,6 +96,7 @@ func (s *UserService) GetProfile(ctx context.Context, userID string) (*UserProfi
 		}
 		return nil, err
 	}
+	p.InstallationConnected = (p.InstallationID > 0)
 	return &p, nil
 }
 

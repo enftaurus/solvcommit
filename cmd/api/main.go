@@ -94,6 +94,8 @@ func main() {
 		GitHub:        ghClient,
 		SessionSecret: []byte(cfg.SessionSecret),
 		AppEnv:        cfg.AppEnv,
+		PublicURL:     cfg.PublicURL,
+		GitHubAppSlug: cfg.GitHubAppSlug,
 	}
 	router := api.NewRouter(handler)
 

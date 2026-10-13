@@ -258,6 +258,26 @@ export const App: React.FC = () => {
         onExitDemo={handleExitDemo}
       />
 
+      {/* Connect GitHub App Banner if not connected */}
+      {user && !user.installation_connected && !isDemoMode && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-xs text-amber-900">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>GitHub App not connected:</strong> Install the GitHub App to allow SolvCommit to sync solutions to your repository.
+              </span>
+            </div>
+            <a
+              href="/api/v1/auth/github/start"
+              className="inline-flex items-center gap-1 rounded-md bg-zinc-900 px-3 py-1 font-medium text-white shadow-xs hover:bg-zinc-800 transition"
+            >
+              Connect GitHub
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Main Container */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Navigation Tabs Bar */}

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -404,6 +405,137 @@ func TestGitHubOAuthFlow(t *testing.T) {
 	payload, err := auth.VerifySessionCookie(testSecret(), sessionCookie.Value)
 	if err != nil || payload.UserID != "user-mock-123" {
 		t.Errorf("invalid session cookie payload: %v", payload)
+	}
+}
+
+func TestGitHubAppInstallRedirect(t *testing.T) {
+	// When user logs in but has instID == 0, redirect to install the GitHub App
+	mockGH := &mockGitHubClient{
+		exchangeFunc: func(ctx context.Context, code string) (*auth.GitHubUserInfo, error) {
+			return &auth.GitHubUserInfo{
+				GitHubUserID:  12345,
+				Login:         "newbie",
+				Installations: []auth.Installation{}, // No installation yet!
+			}, nil
+		},
+	}
+	mockUsers := &mockUserManager{}
+	h := &api.Handler{
+		GitHub:        mockGH,
+		Users:         mockUsers,
+		SessionSecret: testSecret(),
+		GitHubAppSlug: "solvcommit",
+		PublicURL:     "http://localhost:8080",
+	}
+	router := api.NewRouter(h)
+
+	stateCookie := &http.Cookie{Name: "leetsync_oauth_state", Value: "state-123"}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?state=state-123&code=first-login", nil)
+	req.AddCookie(stateCookie)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("expected 307 redirect, got %d", rec.Code)
+	}
+
+	loc := rec.Header().Get("Location")
+	if !strings.HasPrefix(loc, "https://github.com/apps/solvcommit/installations/new?state=") {
+		t.Errorf("expected redirect to app installation, got: %s", loc)
+	}
+
+	// Verify new state cookie was set for installation flow
+	var newStateCookie *http.Cookie
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == "leetsync_oauth_state" && c.Value != "" {
+			newStateCookie = c
+			break
+		}
+	}
+	if newStateCookie == nil {
+		t.Fatalf("expected new state cookie for installation flow")
+	}
+}
+
+func TestGitHubCallbackPostInstallation_SessionFallback(t *testing.T) {
+	// Unknown (a): If GitHub does not return state in query parameters after installation,
+	// but the user has an active session cookie, it securely accepts and updates the installation.
+	var savedInstID int64
+	mockGH := &mockGitHubClient{
+		exchangeFunc: func(ctx context.Context, code string) (*auth.GitHubUserInfo, error) {
+			return &auth.GitHubUserInfo{
+				GitHubUserID: 12345,
+				Login:        "octocat",
+				Installations: []auth.Installation{
+					{ID: 77777, Login: "octocat"},
+				},
+			}, nil
+		},
+	}
+	mockUsers := &mockUserManager{
+		upsertFunc: func(ctx context.Context, ghID, instID int64) (string, error) {
+			savedInstID = instID
+			return "user-mock-123", nil
+		},
+	}
+	h := &api.Handler{
+		GitHub:        mockGH,
+		Users:         mockUsers,
+		SessionSecret: testSecret(),
+		GitHubAppSlug: "solvcommit",
+	}
+	router := api.NewRouter(h)
+
+	sessionVal, _ := auth.MintSessionCookie(testSecret(), "user-mock-123", 1*time.Hour)
+	// Query params after installation: code=inst-code, installation_id=77777, NO state param
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/callback?code=inst-code&installation_id=77777", nil)
+	req.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("expected 307 redirect, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if savedInstID != 77777 {
+		t.Errorf("expected installation 77777 to be saved, got %d", savedInstID)
+	}
+}
+
+func TestGetMe_InstallationConnected(t *testing.T) {
+	mockUsers := &mockUserManager{
+		getFunc: func(ctx context.Context, userID string) (*auth.UserProfile, error) {
+			return &auth.UserProfile{
+				ID:                    userID,
+				Status:                "active",
+				GitHubUserID:          12345,
+				InstallationID:        55555,
+				InstallationConnected: true,
+			}, nil
+		},
+	}
+	h := &api.Handler{
+		Users:         mockUsers,
+		SessionSecret: testSecret(),
+	}
+	router := api.NewRouter(h)
+
+	sessionVal, _ := auth.MintSessionCookie(testSecret(), "user-123", 1*time.Hour)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+
+	var profile auth.UserProfile
+	_ = json.Unmarshal(rec.Body.Bytes(), &profile)
+	if !profile.InstallationConnected {
+		t.Errorf("expected InstallationConnected to be true")
 	}
 }
 

@@ -81,6 +81,7 @@ type Handler struct {
 	SessionSecret []byte
 	AppEnv        string
 	PublicURL     string
+	GitHubAppSlug string
 	TrustProxy    bool
 }
 
@@ -219,7 +220,10 @@ func (h *Handler) handleGitHubStart(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	redirectURI := h.getFullURL(r, "/api/v1/auth/github/callback")
+	redirectURI := strings.TrimRight(h.PublicURL, "/") + "/api/v1/auth/github/callback"
+	if h.PublicURL == "" {
+		redirectURI = "http://" + r.Host + "/api/v1/auth/github/callback"
+	}
 	authURL := h.GitHub.GetAuthURL(state, redirectURI)
 
 	// If request expects JSON (from frontend API call), return URL; otherwise redirect
@@ -244,11 +248,22 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	stateQuery := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
 
-	// 1. Always verify the leetsync_oauth_state cookie against the state query parameter
+	// 1. Verify oauth state. If GitHub didn't return state on installation callback, fallback to session cookie
 	stateCookie, err := r.Cookie("leetsync_oauth_state")
-	if err != nil || stateCookie.Value == "" || stateQuery == "" || stateCookie.Value != stateQuery {
-		http.Error(w, "invalid or expired oauth state", http.StatusBadRequest)
-		return
+	stateMatches := err == nil && stateCookie.Value != "" && stateQuery != "" && stateCookie.Value == stateQuery
+	if !stateMatches {
+		// Fallback for unknown (a): if state was not returned after installation, bind flow to session cookie
+		sessionCookie, sessErr := r.Cookie("leetsync_session")
+		hasValidSession := false
+		if sessErr == nil && sessionCookie.Value != "" {
+			if _, vErr := auth.VerifySessionCookie(h.SessionSecret, sessionCookie.Value); vErr == nil {
+				hasValidSession = true
+			}
+		}
+		if !hasValidSession {
+			http.Error(w, "invalid or expired oauth state", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Return 400 if code is empty
@@ -304,6 +319,25 @@ func (h *Handler) handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 		Secure:   h.AppEnv == "production",
 		SameSite: http.SameSiteLaxMode,
 	})
+
+	// Task 2: In the callback, after a successful login, if instID == 0, set fresh state cookie and redirect to installations/new
+	if instID == 0 && h.GitHubAppSlug != "" {
+		newState, err := auth.GenerateRandomString(32)
+		if err == nil {
+			http.SetCookie(w, &http.Cookie{
+				Name:     "leetsync_oauth_state",
+				Value:    newState,
+				Path:     "/",
+				Expires:  time.Now().Add(10 * time.Minute),
+				HttpOnly: true,
+				Secure:   h.AppEnv == "production",
+				SameSite: http.SameSiteLaxMode,
+			})
+			installURL := fmt.Sprintf("https://github.com/apps/%s/installations/new?state=%s", h.GitHubAppSlug, newState)
+			http.Redirect(w, r, installURL, http.StatusTemporaryRedirect)
+			return
+		}
+	}
 
 	// Redirect user back to the web dashboard root
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -835,15 +869,4 @@ func (h *Handler) extractClientIP(r *http.Request) string {
 		return host
 	}
 	return r.RemoteAddr
-}
-
-func (h *Handler) getFullURL(r *http.Request, path string) string {
-	if h.PublicURL != "" {
-		return strings.TrimRight(h.PublicURL, "/") + path
-	}
-	scheme := "http"
-	if r.TLS != nil || (h.TrustProxy && r.Header.Get("X-Forwarded-Proto") == "https") {
-		scheme = "https"
-	}
-	return scheme + "://" + r.Host + path
 }

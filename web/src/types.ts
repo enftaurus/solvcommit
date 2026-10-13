@@ -2,6 +2,7 @@ export interface UserProfile {
   id: string;
   github_user_id: number;
   installation_id: number;
+  installation_connected?: boolean;
   status: string;
   created_at: string;
 }
