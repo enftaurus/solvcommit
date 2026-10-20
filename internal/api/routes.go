@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 
 	"leetsync/internal/auth"
 	"leetsync/internal/devices"
+	"leetsync/internal/email"
 	"leetsync/internal/github"
 	"leetsync/internal/repositories"
 	"leetsync/internal/submissions"
@@ -37,6 +39,7 @@ type UserManager interface {
 	UpsertGitHubUser(ctx context.Context, githubUserID, installationID int64) (string, error)
 	GetProfile(ctx context.Context, userID string) (*auth.UserProfile, error)
 	HardDelete(ctx context.Context, userID string) error
+	RecordTermsAcceptance(ctx context.Context, userID, termsVersion, privacyVersion string, marketingConsent bool, channel, ip, userAgent string) error
 }
 
 // DeviceManager interface for device operations
@@ -77,6 +80,7 @@ type Handler struct {
 	Submissions   SubmissionManager
 	Repositories  RepositoryManager
 	GitHub        auth.GitHubClient
+	Email         email.Sender
 	SessionSecret []byte
 	AppEnv        string
 	PublicURL     string
@@ -96,6 +100,7 @@ func NewRouter(h *Handler) http.Handler {
 	mux.HandleFunc("GET /api/v1/auth/github/start", h.handleGitHubStart)
 	mux.HandleFunc("GET /api/v1/auth/github/callback", h.handleGitHubCallback)
 	mux.HandleFunc("POST /api/v1/auth/logout", h.requireUserSession(h.handleLogout))
+	mux.HandleFunc("POST /api/v1/auth/accept-terms", h.requireUserSession(h.handleAcceptTerms))
 	mux.HandleFunc("GET /api/v1/me", h.requireUserSession(h.handleGetMe))
 	mux.HandleFunc("DELETE /api/v1/me", h.requireUserSession(h.handleDeleteMe))
 
@@ -139,14 +144,42 @@ func NewRouter(h *Handler) http.Handler {
 		})
 	}
 
-	return withCORS(mux)
+	return h.withSecurityHeadersAndCORS(mux)
 }
 
-func withCORS(next http.Handler) http.Handler {
+func (h *Handler) withSecurityHeadersAndCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		// Strict Security Headers (OWASP recommendations)
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+
+		// CORS Origin Handling
+		origin := r.Header.Get("Origin")
+		allowedOrigin := ""
+		if origin != "" {
+			if strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "http://127.0.0.1:") {
+				allowedOrigin = origin
+			} else if h != nil && h.PublicURL != "" && strings.HasPrefix(origin, strings.TrimRight(h.PublicURL, "/")) {
+				allowedOrigin = origin
+			} else if strings.HasPrefix(origin, "chrome-extension://") || strings.HasPrefix(origin, "moz-extension://") {
+				allowedOrigin = origin
+			}
+		}
+
+		if allowedOrigin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		} else {
+			// For non-credentialed public API / health calls or tests without Origin header
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		}
+
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -369,11 +402,53 @@ func (h *Handler) handleGetMe(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(profile)
 }
 
+func (h *Handler) handleAcceptTerms(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(userIDKey).(string)
+	var body struct {
+		TermsVersion     string `json:"terms_version"`
+		PrivacyVersion   string `json:"privacy_version"`
+		MarketingConsent bool   `json:"marketing_consent"`
+		Channel          string `json:"channel"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if body.TermsVersion == "" {
+		body.TermsVersion = auth.CurrentTermsVersion
+	}
+	if body.PrivacyVersion == "" {
+		body.PrivacyVersion = auth.CurrentPrivacyVersion
+	}
+	if body.Channel == "" {
+		body.Channel = "web_signup"
+	}
+
+	ip := h.extractClientIP(r)
+	userAgent := r.UserAgent()
+
+	if err := h.Users.RecordTermsAcceptance(r.Context(), userID, body.TermsVersion, body.PrivacyVersion, body.MarketingConsent, body.Channel, ip, userAgent); err != nil {
+		http.Error(w, "failed to record acceptance: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":          "accepted",
+		"terms_version":   body.TermsVersion,
+		"privacy_version": body.PrivacyVersion,
+	})
+}
+
 func (h *Handler) handleDeleteMe(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(userIDKey).(string)
 	if err := h.Users.HardDelete(r.Context(), userID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	if h.Email != nil {
+		_ = h.Email.SendDeletionConfirmation(r.Context(), userID)
 	}
 
 	// Clear session

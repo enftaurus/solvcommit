@@ -12,12 +12,28 @@ import (
 
 var ErrUserNotFound = errors.New("user not found")
 
+const (
+	CurrentTermsVersion   = "v1.0"
+	CurrentPrivacyVersion = "v1.0"
+)
+
+type TermsAcceptance struct {
+	UserID           string    `json:"user_id"`
+	TermsVersion     string    `json:"terms_version"`
+	PrivacyVersion   string    `json:"privacy_version"`
+	MarketingConsent bool      `json:"marketing_consent"`
+	Source           string    `json:"source"`
+	AcceptedAt       time.Time `json:"accepted_at"`
+}
+
 type UserProfile struct {
 	ID                    string    `json:"id"`
 	Status                string    `json:"status"`
 	GitHubUserID          int64     `json:"github_user_id"`
 	InstallationID        int64     `json:"installation_id"`
 	InstallationConnected bool      `json:"installation_connected"`
+	TermsAccepted         bool      `json:"terms_accepted"`
+	TermsVersion          string    `json:"terms_version"`
 	CreatedAt             time.Time `json:"created_at"`
 }
 
@@ -97,7 +113,30 @@ func (s *UserService) GetProfile(ctx context.Context, userID string) (*UserProfi
 		return nil, err
 	}
 	p.InstallationConnected = (p.InstallationID > 0)
+	var termsVersion string
+	termsQuery := `SELECT terms_version FROM terms_acceptances WHERE user_id = $1 ORDER BY accepted_at DESC LIMIT 1;`
+	if err := s.pool.QueryRow(ctx, termsQuery, userID).Scan(&termsVersion); err == nil {
+		p.TermsAccepted = (termsVersion == CurrentTermsVersion)
+		p.TermsVersion = termsVersion
+	}
 	return &p, nil
+}
+
+// RecordTermsAcceptance persists user acceptance of Terms of Service and Privacy Policy server-side
+func (s *UserService) RecordTermsAcceptance(ctx context.Context, userID, termsVersion, privacyVersion string, marketingConsent bool, channel, ip, userAgent string) error {
+	query := `
+		INSERT INTO terms_acceptances (user_id, terms_version, privacy_version, marketing_consent, channel, ip_address, user_agent, accepted_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+		ON CONFLICT (user_id, terms_version) DO UPDATE
+		SET privacy_version = EXCLUDED.privacy_version,
+		    marketing_consent = EXCLUDED.marketing_consent,
+		    channel = EXCLUDED.channel,
+		    ip_address = EXCLUDED.ip_address,
+		    user_agent = EXCLUDED.user_agent,
+		    accepted_at = NOW();
+	`
+	_, err := s.pool.Exec(ctx, query, userID, termsVersion, privacyVersion, marketingConsent, channel, ip, userAgent)
+	return err
 }
 
 // HardDelete removes user and all cascading relations (D-22)

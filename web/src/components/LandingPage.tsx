@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "../api";
+import { Footer } from "./Footer";
 
 interface LandingPageProps {
   onEnterDemo: () => void;
@@ -237,30 +238,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-8">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center space-x-2">
-            <span className="font-semibold text-slate-800">SolvCommit</span>
-            <span>—</span>
-            <span>Accepted submissions to GitHub automatically.</span>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <a
-              href="https://github.com/enftaurus/solvcommit"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-slate-900 transition-colors flex items-center space-x-1"
-            >
-              <Github className="h-3.5 w-3.5" />
-              <span>GitHub</span>
-            </a>
-            <span>•</span>
-            <span>Phase 5 (Dashboard)</span>
-          </div>
-        </div>
-      </footer>
+      {/* Site-wide Footer */}
+      <Footer />
     </div>
   );
 };

@@ -36,11 +36,15 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  // Auth
   getMe: () => request<UserProfile>("/api/v1/me"),
   deleteMe: () => request<{ status: string }>("/api/v1/me", { method: "DELETE" }),
   logout: () => request<{ status: string }>("/api/v1/auth/logout", { method: "POST" }),
   getLoginURL: () => request<{ url: string }>("/api/v1/auth/github/start"),
+  acceptTerms: (data: { terms_version?: string; privacy_version?: string; marketing_consent?: boolean; channel?: string } = {}) =>
+    request<{ status: string; terms_version: string; privacy_version: string }>("/api/v1/auth/accept-terms", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // Sync Pipeline
   getSyncStatus: () => request<SyncStatus>("/api/v1/sync/status"),

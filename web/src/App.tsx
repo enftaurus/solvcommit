@@ -22,6 +22,12 @@ import { AccountSettings } from "./components/AccountSettings";
 import { LandingPage } from "./components/LandingPage";
 import { PairModal } from "./components/PairModal";
 import { ConnectExtension } from "./components/ConnectExtension";
+import { Footer } from "./components/Footer";
+import { PrivacyPolicy } from "./components/PrivacyPolicy";
+import { TermsOfService } from "./components/TermsOfService";
+import { SupportPage } from "./components/SupportPage";
+import { ContactPage } from "./components/ContactPage";
+import { TermsAcceptanceModal } from "./components/TermsAcceptanceModal";
 import {
   demoUser,
   demoRepo,
@@ -213,6 +219,49 @@ export const App: React.FC = () => {
           <div className="h-6 w-6 rounded-full border-2 border-slate-300 border-t-slate-800 animate-spin" />
           <span className="text-sm font-medium">Loading SolvCommit...</span>
         </div>
+      </div>
+    );
+  }
+
+  // Public legal & support routes (accessible to everyone)
+  const currentPath = window.location.pathname;
+  if (currentPath === "/privacy") {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-50">
+        <div className="flex-1">
+          <PrivacyPolicy onBack={() => { window.location.href = "/"; }} />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+  if (currentPath === "/terms") {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-50">
+        <div className="flex-1">
+          <TermsOfService onBack={() => { window.location.href = "/"; }} />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+  if (currentPath === "/support") {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-50">
+        <div className="flex-1">
+          <SupportPage onBack={() => { window.location.href = "/"; }} />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+  if (currentPath === "/contact") {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-50">
+        <div className="flex-1">
+          <ContactPage onBack={() => { window.location.href = "/"; }} />
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -453,6 +502,25 @@ export const App: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* Site-wide Footer */}
+      <Footer />
+
+      {/* Mandatory Terms Acceptance Modal if terms not yet accepted */}
+      {user && !user.terms_accepted && !isDemoMode && (
+        <TermsAcceptanceModal
+          onAccepted={async () => {
+            showToast("Terms of Service and Privacy Policy accepted. Welcome!", "success");
+            try {
+              const updated = await api.getMe();
+              setUser(updated);
+            } catch {
+              setUser((prev) => prev ? { ...prev, terms_accepted: true, terms_version: "v1.0" } : null);
+            }
+            loadDashboardData();
+          }}
+        />
+      )}
 
       {/* Global Pair Modal */}
       <PairModal

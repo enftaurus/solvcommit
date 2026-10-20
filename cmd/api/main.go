@@ -15,6 +15,7 @@ import (
 	"leetsync/internal/config"
 	"leetsync/internal/database"
 	"leetsync/internal/devices"
+	"leetsync/internal/email"
 	"leetsync/internal/github"
 	"leetsync/internal/queue"
 	"leetsync/internal/repositories"
@@ -83,6 +84,16 @@ func main() {
 		ghClient = auth.NewRealGitHubClient(ghClientID, ghClientSecret)
 	}
 
+	// Email sender (Phase 7: Transactional Email)
+	emailSvc := email.NewSender(email.Config{
+		Host:         cfg.SMTPHost,
+		Port:         cfg.SMTPPort,
+		User:         cfg.SMTPUser,
+		Pass:         cfg.SMTPPass,
+		From:         cfg.EmailFrom,
+		SupportEmail: cfg.SupportEmail,
+	}, logger)
+
 	// Router (ponytail: stdlib net/http.ServeMux mounted via api package)
 	handler := &api.Handler{
 		DB:            db,
@@ -92,6 +103,7 @@ func main() {
 		Submissions:   submissionSvc,
 		Repositories:  repoSvc,
 		GitHub:        ghClient,
+		Email:         emailSvc,
 		SessionSecret: []byte(cfg.SessionSecret),
 		AppEnv:        cfg.AppEnv,
 		PublicURL:     cfg.PublicURL,

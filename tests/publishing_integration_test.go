@@ -113,7 +113,9 @@ func TestPublishingPipelineIntegration(t *testing.T) {
 			}
 
 			if r.Method == http.MethodPut {
-				putCount++
+				if relPath != "README.md" {
+					putCount++
+				}
 				body, _ := io.ReadAll(r.Body)
 				var req struct {
 					Message string `json:"message"`

@@ -31,6 +31,7 @@ type mockUserManager struct {
 	upsertFunc func(ctx context.Context, ghID, instID int64) (string, error)
 	getFunc    func(ctx context.Context, userID string) (*auth.UserProfile, error)
 	deleteFunc func(ctx context.Context, userID string) error
+	termsFunc  func(ctx context.Context, userID, termsVersion, privacyVersion string, marketingConsent bool, channel, ip, userAgent string) error
 }
 
 func (m *mockUserManager) UpsertGitHubUser(ctx context.Context, ghID, instID int64) (string, error) {
@@ -50,6 +51,13 @@ func (m *mockUserManager) GetProfile(ctx context.Context, userID string) (*auth.
 func (m *mockUserManager) HardDelete(ctx context.Context, userID string) error {
 	if m.deleteFunc != nil {
 		return m.deleteFunc(ctx, userID)
+	}
+	return nil
+}
+
+func (m *mockUserManager) RecordTermsAcceptance(ctx context.Context, userID, termsVersion, privacyVersion string, marketingConsent bool, channel, ip, userAgent string) error {
+	if m.termsFunc != nil {
+		return m.termsFunc(ctx, userID, termsVersion, privacyVersion, marketingConsent, channel, ip, userAgent)
 	}
 	return nil
 }
@@ -977,5 +985,64 @@ func TestSPAFallback(t *testing.T) {
 	router.ServeHTTP(apiRec, apiReq)
 	if apiRec.Code != http.StatusNotFound {
 		t.Errorf("expected 404 for unknown api endpoint, got %d", apiRec.Code)
+	}
+}
+
+func TestAcceptTerms(t *testing.T) {
+	var recordedTerms, recordedPriv, recordedChannel string
+	var recordedMarketing bool
+	mockUsers := &mockUserManager{
+		termsFunc: func(ctx context.Context, userID, termsVersion, privacyVersion string, marketingConsent bool, channel, ip, userAgent string) error {
+			recordedTerms = termsVersion
+			recordedPriv = privacyVersion
+			recordedMarketing = marketingConsent
+			recordedChannel = channel
+			return nil
+		},
+	}
+
+	secret := "test-secret-at-least-32-bytes-long!"
+	handler := &api.Handler{
+		Users:         mockUsers,
+		SessionSecret: []byte(secret),
+		AppEnv:        "test",
+	}
+	router := api.NewRouter(handler)
+
+	sessionVal, err := auth.MintSessionCookie([]byte(secret), "user-test-terms", time.Hour)
+	if err != nil {
+		t.Fatalf("failed to mint session: %v", err)
+	}
+
+	body := map[string]interface{}{
+		"terms_version":     "v1.0",
+		"privacy_version":   "v1.0",
+		"marketing_consent": true,
+		"channel":           "web_modal",
+	}
+	raw, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/accept-terms", bytes.NewReader(raw))
+	req.AddCookie(&http.Cookie{Name: "leetsync_session", Value: sessionVal})
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", "http://localhost:3000")
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	if recordedTerms != "v1.0" || recordedPriv != "v1.0" || !recordedMarketing || recordedChannel != "web_modal" {
+		t.Errorf("terms recording mismatch: got terms=%s priv=%s marketing=%v channel=%s", recordedTerms, recordedPriv, recordedMarketing, recordedChannel)
+	}
+
+	// Verify CORS header was set for localhost:3000
+	if rec.Header().Get("Access-Control-Allow-Origin") != "http://localhost:3000" {
+		t.Errorf("expected Access-Control-Allow-Origin to be http://localhost:3000, got %s", rec.Header().Get("Access-Control-Allow-Origin"))
+	}
+	if rec.Header().Get("Access-Control-Allow-Credentials") != "true" {
+		t.Errorf("expected Access-Control-Allow-Credentials to be true")
 	}
 }

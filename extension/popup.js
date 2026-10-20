@@ -126,4 +126,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   openDashboardBtn.addEventListener("click", () => {
     extAPI.tabs.create({ url: baseUrl });
   });
+
+  const linkPrivacy = document.getElementById("linkPrivacy");
+  if (linkPrivacy) {
+    linkPrivacy.addEventListener("click", (e) => {
+      e.preventDefault();
+      extAPI.tabs.create({ url: `${baseUrl}/privacy` });
+    });
+  }
+
+  const linkTerms = document.getElementById("linkTerms");
+  if (linkTerms) {
+    linkTerms.addEventListener("click", (e) => {
+      e.preventDefault();
+      extAPI.tabs.create({ url: `${baseUrl}/terms` });
+    });
+  }
+
+  const linkSupport = document.getElementById("linkSupport");
+  if (linkSupport) {
+    linkSupport.addEventListener("click", (e) => {
+      e.preventDefault();
+      extAPI.tabs.create({ url: `${baseUrl}/support` });
+    });
+  }
 });

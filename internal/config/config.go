@@ -21,6 +21,12 @@ type Config struct {
 	PublicURL            string
 	GitHubAppID          string
 	GitHubAppKeyPath     string
+	SupportEmail         string
+	SMTPHost             string
+	SMTPPort             int
+	SMTPUser             string
+	SMTPPass             string
+	EmailFrom            string
 }
 
 // devSessionSecret is the insecure default used only in development.
@@ -42,6 +48,12 @@ func Load() (*Config, error) {
 		PublicURL:        strings.TrimRight(getEnv("PUBLIC_URL", "http://localhost:8080"), "/"),
 		GitHubAppID:      getEnv("GITHUB_APP_ID", ""),
 		GitHubAppKeyPath: getEnv("GITHUB_APP_PRIVATE_KEY_PATH", ""),
+		SupportEmail:     getEnv("SUPPORT_EMAIL", "valyrianminds@zohomail.in"),
+		SMTPHost:         getEnv("SMTP_HOST", ""),
+		SMTPPort:         getEnvInt("SMTP_PORT", 587),
+		SMTPUser:         getEnv("SMTP_USER", ""),
+		SMTPPass:         getEnv("SMTP_PASS", ""),
+		EmailFrom:        getEnv("EMAIL_FROM", "noreply@solvcommit.dev"),
 	}
 
 	brokersStr := getEnv("KAFKA_BROKERS", "localhost:9092")
