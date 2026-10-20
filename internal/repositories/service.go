@@ -98,11 +98,11 @@ func (s *Service) SelectRepository(ctx context.Context, userID string, req *Sele
 	if req.InitReadme {
 		_, err = s.github.GetFile(ctx, instID, req.Owner, req.Name, "README.md")
 		if errors.Is(err, github.ErrFileNotFound) {
-			defaultReadme := "# LeetCode Submissions\n\nPersonal LeetCode solutions synchronized automatically by [LeetSync](https://github.com/enftaurus/solvcommit).\n"
-			_, putErr := s.github.PutFile(ctx, instID, req.Owner, req.Name, "README.md", defaultReadme, "chore: initialize leetsync readme", branch)
+			defaultReadme := "# LeetCode Submissions\n\nPersonal LeetCode solutions synchronized automatically by [SolvCommit](https://github.com/enftaurus/solvcommit).\n"
+			_, putErr := s.github.PutFile(ctx, instID, req.Owner, req.Name, "README.md", defaultReadme, "chore: initialize solvcommit readme", branch)
 			if putErr != nil {
 				// Non-fatal if branch is empty or initialization fails; log and proceed
-				fmt.Printf("[LeetSync] Note: initial README creation skipped/failed: %v\n", putErr)
+				fmt.Printf("[SolvCommit] Note: initial README creation skipped/failed: %v\n", putErr)
 			}
 		}
 	}

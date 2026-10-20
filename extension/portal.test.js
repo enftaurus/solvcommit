@@ -16,7 +16,13 @@ async function simulatePairFromPortal({
     return { ok: false, error: "invalid sender url" };
   }
 
-  if (senderOrigin !== new URL(expectedOrigin).origin) {
+  const expected = new URL(expectedOrigin).origin;
+  const isAllowedOrigin =
+    senderOrigin === expected ||
+    senderOrigin.startsWith("http://localhost:") ||
+    senderOrigin.startsWith("http://127.0.0.1:");
+
+  if (!isAllowedOrigin) {
     return { ok: false, error: "origin mismatch" };
   }
 

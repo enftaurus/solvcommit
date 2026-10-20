@@ -1,4 +1,4 @@
-// LeetSync Main-World Interceptor (Manifest V3 - Page JS Context)
+// SolvCommit Main-World Interceptor (Manifest V3 - Page JS Context)
 // Intercepts submit requests directly in the page execution context and notifies content script.
 (() => {
   const origFetch = window.fetch;
@@ -10,7 +10,7 @@
       if (/^\/problems\/[^/]+\/submit\/?$/.test(url.pathname)) {
         res.clone().json().then((d) => {
           if (d && d.submission_id) {
-            window.postMessage({ type: 'LEETSYNC_SUBMISSION_DETECTED', submissionId: String(d.submission_id) }, location.origin);
+            window.postMessage({ type: 'SOLVCOMMIT_SUBMISSION_DETECTED', submissionId: String(d.submission_id) }, location.origin);
           }
         }).catch(() => {});
       }

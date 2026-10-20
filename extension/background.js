@@ -1,4 +1,4 @@
-// LeetSync Background Service Worker (Manifest V3 - Cross-browser: Chrome & Firefox)
+// SolvCommit Background Service Worker (Manifest V3 - Cross-browser: Chrome & Firefox)
 // Manages authentication tokens, offline submission queue, periodic retry, and backfill.
 
 if (typeof importScripts === "function") {
@@ -22,14 +22,14 @@ const queue = new OfflineQueue(storageAdapter);
 
 // Initialize Alarms on Install / Startup
 extAPI.runtime.onInstalled.addListener(() => {
-  console.log("[LeetSync] Extension installed/updated (cross-browser Chrome & Firefox).");
+  console.log("[SolvCommit] Extension installed/updated (cross-browser Chrome & Firefox).");
   // Setup alarm for queue drainage and periodic backfill (every 2 minutes)
-  extAPI.alarms.create("leetsync_queue_drain", { periodInMinutes: 2 });
+  extAPI.alarms.create("solvcommit_queue_drain", { periodInMinutes: 2 });
 });
 
 // Periodic Alarm Handler
 extAPI.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === "leetsync_queue_drain") {
+  if (alarm.name === "solvcommit_queue_drain" || alarm.name === "leetsync_queue_drain") {
     await processOfflineQueue();
   }
 });
@@ -80,7 +80,7 @@ async function authedFetch(url, init = {}) {
   return res;
 }
 
-// LeetSync API Client
+// SolvCommit API Client
 const apiClient = {
   async submit(item) {
     const res = await authedFetch(`${API_BASE_URL}/api/v1/sync/submissions`, {
@@ -133,10 +133,10 @@ async function processOfflineQueue() {
     }
     const result = await queue.process(apiClient);
     if (result.processed > 0 || result.failed > 0) {
-      console.log("[LeetSync] Queue run completed:", result);
+      console.log("[SolvCommit] Queue run completed:", result);
     }
   } catch (err) {
-    console.warn("[LeetSync] Error draining offline queue:", err.message);
+    console.warn("[SolvCommit] Error draining offline queue:", err.message);
   }
 }
 
@@ -193,7 +193,7 @@ extAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
         try {
           senderOrigin = new URL(senderUrl).origin;
         } catch (e) {
-          console.warn("[LeetSync Background] Invalid sender URL:", senderUrl);
+          console.warn("[SolvCommit Background] Invalid sender URL:", senderUrl);
           return sendResponse({ ok: false, error: "invalid sender url" });
         }
 
@@ -202,15 +202,17 @@ extAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
           senderOrigin === expectedOrigin ||
           senderOrigin === "http://localhost:8080" ||
           senderOrigin === "http://127.0.0.1:8080" ||
-          senderOrigin === "http://localhost:3000";
+          senderOrigin === "http://localhost:3000" ||
+          senderOrigin.startsWith("http://localhost:") ||
+          senderOrigin.startsWith("http://127.0.0.1:");
 
         if (!isAllowedOrigin) {
-          console.warn("[LeetSync Background] Origin mismatch. Sender:", senderOrigin, "Expected:", expectedOrigin);
+          console.warn("[SolvCommit Background] Origin mismatch. Sender:", senderOrigin, "Expected:", expectedOrigin);
           return sendResponse({ ok: false, error: "origin mismatch" });
         }
 
         const stored = await storageAdapter.get(["pair_state", "pair_state_exp"]);
-        console.log("[LeetSync Background] PAIR_FROM_PORTAL received. State payload:", payload.state, "Stored state:", stored.pair_state);
+        console.log("[SolvCommit Background] PAIR_FROM_PORTAL received. State payload:", payload.state, "Stored state:", stored.pair_state);
 
         if (!stored.pair_state || stored.pair_state !== payload.state) {
           return sendResponse({ ok: false, error: "state mismatch or missing" });

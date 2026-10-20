@@ -211,7 +211,7 @@ export const App: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="flex items-center space-x-3 text-slate-700">
           <div className="h-6 w-6 rounded-full border-2 border-slate-300 border-t-slate-800 animate-spin" />
-          <span className="text-sm font-medium">Loading LeetSync...</span>
+          <span className="text-sm font-medium">Loading SolvCommit...</span>
         </div>
       </div>
     );

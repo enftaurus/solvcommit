@@ -1,8 +1,8 @@
-// LeetSync Content Script (Manifest V3)
+// SolvCommit Content Script (Manifest V3)
 // Captures accepted submissions in the user's active session on leetcode.com/problems/*
 // Never exposes LeetCode credentials outside the browser (D-04).
 
-console.log("[LeetSync] Content script active on", window.location.pathname);
+console.log("[SolvCommit] Content script active on", window.location.pathname);
 
 // Inject main-world interceptor directly into page DOM (ensures execution in Firefox & Chrome)
 (() => {
@@ -19,15 +19,15 @@ console.log("[LeetSync] Content script active on", window.location.pathname);
             res.clone().json().then((d) => {
               if (d && (d.submission_id || d.submissionId)) {
                 const subId = String(d.submission_id || d.submissionId);
-                console.log('[LeetSync] Detected submit response, submission_id:', subId);
-                window.postMessage({ type: 'LEETSYNC_SUBMISSION_DETECTED', submissionId: subId }, '*');
+                console.log('[SolvCommit] Detected submit response, submission_id:', subId);
+                window.postMessage({ type: 'SOLVCOMMIT_SUBMISSION_DETECTED', submissionId: subId }, '*');
               }
             }).catch(() => {});
           }
         } catch (_) {}
         return res;
       };
-      console.log('[LeetSync] Page submit fetch hook installed successfully.');
+      console.log('[SolvCommit] Page submit fetch hook installed successfully.');
     })();
   `;
   (document.head || document.documentElement).appendChild(script);
@@ -105,7 +105,7 @@ async function waitForFinalDetails(id) {
     try {
       const d = await fetchSubmissionDetails(id);
       if (d) {
-        console.log(`[LeetSync] Poll attempt ${i + 1}: statusDisplay="${d.statusDisplay}", statusCode=${d.statusCode}, hasCode=${!!d.code}`);
+        console.log(`[SolvCommit] Poll attempt ${i + 1}: statusDisplay="${d.statusDisplay}", statusCode=${d.statusCode}, hasCode=${!!d.code}`);
         // If still judging, queued, started, or temporary internal error during early judge spinup
         const isJudging = !d.code || !d.statusDisplay || /pending|judging|started|internal error/i.test(d.statusDisplay);
         if (!isJudging) {
@@ -113,7 +113,7 @@ async function waitForFinalDetails(id) {
         }
       }
     } catch (e) {
-      console.warn("[LeetSync] Polling submission details attempt failed:", e.message);
+      console.warn("[SolvCommit] Polling submission details attempt failed:", e.message);
     }
     await new Promise((r) => setTimeout(r, 1500));
   }
@@ -125,11 +125,11 @@ async function handleSubmissionCaptured(submissionId) {
   try {
     const details = await waitForFinalDetails(submissionId);
     if (!details) {
-      console.warn("[LeetSync] Could not fetch final details for submission:", submissionId);
+      console.warn("[SolvCommit] Could not fetch final details for submission:", submissionId);
       return;
     }
 
-    console.log("[LeetSync] Final submission details received:", {
+    console.log("[SolvCommit] Final submission details received:", {
       statusDisplay: details.statusDisplay,
       statusCode: details.statusCode,
       lang: details.lang?.name,
@@ -142,7 +142,7 @@ async function handleSubmissionCaptured(submissionId) {
 
     // Strict Rule: Only Accepted submissions (D-10)
     if (!isAccepted) {
-      console.log("[LeetSync] Submission is not accepted (status:", details.statusDisplay, "code:", details.statusCode, "). Skipping.");
+      console.log("[SolvCommit] Submission is not accepted (status:", details.statusDisplay, "code:", details.statusCode, "). Skipping.");
       return;
     }
 
@@ -150,7 +150,7 @@ async function handleSubmissionCaptured(submissionId) {
     const problemTitle = details.question?.title || details.question?.titleSlug || problemSlug;
     const lang = details.lang?.name;
     if (!lang) {
-      console.warn("[LeetSync] Missing language in submission details, skipping");
+      console.warn("[SolvCommit] Missing language in submission details, skipping");
       return;
     }
 
@@ -164,7 +164,7 @@ async function handleSubmissionCaptured(submissionId) {
       submitted_at: new Date(details.timestamp * 1000).toISOString()
     };
 
-    console.log("[LeetSync] Enqueueing accepted submission:", payload.submission_id, payload.problem_slug);
+    console.log("[SolvCommit] Enqueueing accepted submission:", payload.submission_id, payload.problem_slug);
 
     const extAPI = typeof browser !== "undefined" ? browser : chrome;
     extAPI.runtime.sendMessage({
@@ -172,13 +172,13 @@ async function handleSubmissionCaptured(submissionId) {
       payload
     }, (res) => {
       if (res && res.success) {
-        console.log("[LeetSync] Submission enqueued successfully.");
+        console.log("[SolvCommit] Submission enqueued successfully.");
       } else {
-        console.warn("[LeetSync] Failed to enqueue submission:", res?.error);
+        console.warn("[SolvCommit] Failed to enqueue submission:", res?.error);
       }
     });
   } catch (err) {
-    console.error("[LeetSync] Failed to capture submission:", err);
+    console.error("[SolvCommit] Failed to capture submission:", err);
   }
 }
 
@@ -193,8 +193,12 @@ function extractProblemSlugFromUrl() {
 
 // Listen for custom dispatch or DOM submission responses
 window.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "LEETSYNC_SUBMISSION_DETECTED" && event.data.submissionId) {
-    console.log("[LeetSync] Message received in content script:", event.data.submissionId);
+  if (
+    event.data &&
+    (event.data.type === "SOLVCOMMIT_SUBMISSION_DETECTED" || event.data.type === "LEETSYNC_SUBMISSION_DETECTED") &&
+    event.data.submissionId
+  ) {
+    console.log("[SolvCommit] Message received in content script:", event.data.submissionId);
     handleSubmissionCaptured(event.data.submissionId);
   }
 });

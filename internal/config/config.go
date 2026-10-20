@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Config holds application configuration for LeetSync services
+// Config holds application configuration for SolvCommit services
 type Config struct {
 	AppEnv        string
 	HTTPAddr      string

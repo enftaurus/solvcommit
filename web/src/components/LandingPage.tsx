@@ -44,7 +44,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
               <FolderGit2 className="h-5 w-5" />
             </div>
             <div className="flex items-center space-x-2">
-              <span className="font-semibold text-base tracking-tight text-slate-900">LeetSync</span>
+              <span className="font-semibold text-base tracking-tight text-slate-900">SolvCommit</span>
               <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
                 v1.0
               </span>
@@ -241,7 +241,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
       <footer className="border-t border-slate-200/80 bg-white py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center space-x-2">
-            <span className="font-semibold text-slate-800">LeetSync</span>
+            <span className="font-semibold text-slate-800">SolvCommit</span>
             <span>—</span>
             <span>Accepted submissions to GitHub automatically.</span>
           </div>

@@ -116,7 +116,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
           <div>
             <h3 className="text-base font-semibold text-slate-900">Extension Setup Guide</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Install LeetSync in Chrome or Firefox to capture your accepted LeetCode submissions.
+              Install SolvCommit in Chrome or Firefox to capture your accepted LeetCode submissions.
             </p>
           </div>
 
@@ -180,7 +180,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
                 <div>
                   <span className="font-semibold text-slate-800">Pair With Dashboard</span>
                   <p className="text-slate-500 mt-0.5">
-                    Click the LeetSync extension icon in your toolbar, click <strong>Pair Device</strong>, and paste your pairing code from the <em>Devices</em> tab.
+                    Click the SolvCommit extension icon in your toolbar, click <strong>Pair Device</strong>, and paste your pairing code from the <em>Devices</em> tab.
                   </p>
                 </div>
               </div>
@@ -218,7 +218,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
                 <div>
                   <span className="font-semibold text-slate-800">Pair & Verify</span>
                   <p className="text-slate-500 mt-0.5">
-                    Click the puzzle piece icon, pin LeetSync to your toolbar, and complete pairing with your pairing token.
+                    Click the puzzle piece icon, pin SolvCommit to your toolbar, and complete pairing with your pairing token.
                   </p>
                 </div>
               </div>
@@ -264,7 +264,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
           <ul className="space-y-2.5 text-xs text-slate-600">
             <li className="flex items-start space-x-2">
               <span className="text-emerald-600 font-bold shrink-0">✓</span>
-              <span><strong>Zero LeetCode Credentials:</strong> LeetSync never handles or stores your LeetCode password or cookies.</span>
+              <span><strong>Zero LeetCode Credentials:</strong> SolvCommit never handles or stores your LeetCode password or cookies.</span>
             </li>
             <li className="flex items-start space-x-2">
               <span className="text-emerald-600 font-bold shrink-0">✓</span>
@@ -286,7 +286,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed max-w-2xl">
-          Permanently delete your LeetSync account, repository associations, and device session keys.
+          Permanently delete your SolvCommit account, repository associations, and device session keys.
           Your GitHub repositories and existing commits remain untouched on GitHub.
         </p>
 
@@ -319,7 +319,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
 
             <p className="mt-4 text-xs text-slate-600 leading-relaxed">
               All metadata, device pairings, and sync preferences will be immediately and permanently
-              removed from LeetSync.
+              removed from SolvCommit.
             </p>
 
             <div className="mt-4">

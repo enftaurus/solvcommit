@@ -30,7 +30,7 @@ func main() {
 	}
 
 	logger := telemetry.InitLogger(cfg.AppEnv)
-	logger.Info("Starting LeetSync API server", "env", cfg.AppEnv, "addr", cfg.HTTPAddr)
+	logger.Info("Starting SolvCommit API server", "env", cfg.AppEnv, "addr", cfg.HTTPAddr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -118,7 +118,7 @@ func main() {
 		}
 	}()
 
-	logger.Info("LeetSync API listening", "addr", cfg.HTTPAddr)
+	logger.Info("SolvCommit API listening", "addr", cfg.HTTPAddr)
 
 	<-shutdown
 	logger.Info("Shutting down API server gracefully...")
@@ -130,5 +130,5 @@ func main() {
 		logger.Error("API server forced shutdown", "error", err)
 	}
 
-	logger.Info("LeetSync API server stopped")
+	logger.Info("SolvCommit API server stopped")
 }

@@ -24,7 +24,7 @@ func main() {
 	}
 
 	logger := telemetry.InitLogger(cfg.AppEnv)
-	logger.Info("Starting LeetSync Publisher worker", "env", cfg.AppEnv)
+	logger.Info("Starting SolvCommit Publisher worker", "env", cfg.AppEnv)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -75,7 +75,7 @@ func main() {
 		}
 	}()
 
-	logger.Info("LeetSync Publisher worker running and listening for submissions")
+	logger.Info("SolvCommit Publisher worker running and listening for submissions")
 
 	// Worker shutdown channel
 	shutdown := make(chan os.Signal, 1)
@@ -87,5 +87,5 @@ func main() {
 
 	// Allow brief cleanup
 	time.Sleep(300 * time.Millisecond)
-	logger.Info("LeetSync Publisher worker stopped cleanly")
+	logger.Info("SolvCommit Publisher worker stopped cleanly")
 }

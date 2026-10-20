@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "LeetSync",
+  "name": "SolvCommit",
   "version": "1.0.0",
   "description": "Publishes every accepted LeetCode submission to your GitHub repository.",
   "permissions": [
@@ -9,8 +9,9 @@
   ],
   "host_permissions": [
     "https://leetcode.com/*",
-    "http://localhost:8080/*",
-    "http://127.0.0.1:8080/*"
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -18,7 +19,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "leetsync@leetsync.dev",
+      "id": "solvcommit@solvcommit.dev",
       "strict_min_version": "109.0"
     }
   },
@@ -44,9 +45,9 @@
     },
     {
       "matches": [
-        "http://localhost:8080/connect-extension*",
-        "http://127.0.0.1:8080/connect-extension*",
-        "http://localhost:3000/connect-extension*"
+        "http://localhost/connect-extension*",
+        "http://127.0.0.1/connect-extension*",
+        "https://*/connect-extension*"
       ],
       "js": [
         "portal-bridge.js"

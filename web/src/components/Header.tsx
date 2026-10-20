@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-base font-semibold tracking-tight text-zinc-950">
-              LeetSync
+              SolvCommit
             </span>
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 border border-zinc-200">
               v1.0

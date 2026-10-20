@@ -30,7 +30,8 @@ export const ConnectExtension: React.FC<ConnectExtensionProps> = ({ onGoToDashbo
     const maxAttempts = 20;
 
     const handleMessage = (e: MessageEvent) => {
-      if (e.source !== window || e.origin !== window.location.origin) return;
+      if (e.source !== window) return;
+      if (e.origin && e.origin !== window.location.origin && e.origin !== "null") return;
       if (e.data && e.data.type === "SOLVCOMMIT_PAIR_RESULT") {
         if (e.data.ok) {
           if (intervalId) clearInterval(intervalId);

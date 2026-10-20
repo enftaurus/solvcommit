@@ -1,4 +1,4 @@
-// LeetSync Extension - Offline Queue & Backfill Manager (FR-EXT-05, FR-ING-05)
+// SolvCommit Extension - Offline Queue & Backfill Manager (FR-EXT-05, FR-ING-05)
 
 class OfflineQueue {
   /**
@@ -105,7 +105,7 @@ class OfflineQueue {
       } catch (err) {
         // If permanent error (HTTP 422: unprocessable, rejected status, invalid language)
         if (err.status === 422 || err.isPermanent) {
-          console.warn(`[LeetSync Queue] Submission ${item.submission_id} permanently rejected:`, err.message);
+          console.warn(`[SolvCommit Queue] Submission ${item.submission_id} permanently rejected:`, err.message);
           failedCount++;
           // Drop from queue to avoid infinite retry loops
           continue;
@@ -159,7 +159,7 @@ class OfflineQueue {
           enqueuedCount++;
         }
       } catch (err) {
-        console.error(`[LeetSync Backfill] Failed to fetch details for missing submission ${missingId}:`, err);
+        console.error(`[SolvCommit Backfill] Failed to fetch details for missing submission ${missingId}:`, err);
       }
     }
 

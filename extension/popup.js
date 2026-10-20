@@ -1,4 +1,4 @@
-// LeetSync Popup Controller (Cross-browser: Chrome & Firefox)
+// SolvCommit Popup Controller (Cross-browser: Chrome & Firefox)
 
 document.addEventListener("DOMContentLoaded", async () => {
   const extAPI = typeof browser !== "undefined" ? browser : chrome;

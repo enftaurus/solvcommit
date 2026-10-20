@@ -73,7 +73,7 @@ export const PairModal: React.FC<PairModalProps> = ({ isOpen, onClose, onPaired 
             </div>
             <div>
               <h3 className="text-base font-semibold text-slate-900">Pair Browser Extension</h3>
-              <p className="text-xs text-slate-500">Connect Chrome or Firefox to your LeetSync account</p>
+              <p className="text-xs text-slate-500">Connect Chrome or Firefox to your SolvCommit account</p>
             </div>
           </div>
           <button
@@ -115,7 +115,7 @@ export const PairModal: React.FC<PairModalProps> = ({ isOpen, onClose, onPaired 
                 <span>Security Assurance</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                LeetSync issues a cryptographically signed pair token. Refresh tokens are stored
+                SolvCommit issues a cryptographically signed pair token. Refresh tokens are stored
                 only as SHA-256 hashes on the server with reuse detection.
               </p>
             </div>
@@ -183,7 +183,7 @@ export const PairModal: React.FC<PairModalProps> = ({ isOpen, onClose, onPaired 
                 <span>How to pair in Chrome or Firefox:</span>
               </div>
               <ol className="list-decimal list-inside space-y-1.5 text-slate-600 pl-1 leading-relaxed">
-                <li>Click the <strong>LeetSync</strong> icon in your browser extension toolbar.</li>
+                <li>Click the <strong>SolvCommit</strong> icon in your browser extension toolbar.</li>
                 <li>Click <strong>Pair Device</strong> in the popup window.</li>
                 <li>Paste the payload above and click <strong>Connect</strong>.</li>
                 <li>Your browser is now securely paired! Every accepted LeetCode submission will sync automatically.</li>
