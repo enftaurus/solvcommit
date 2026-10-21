@@ -1,0 +1,68 @@
+# ==============================================================================
+# Multi-stage production build for SolvCommit Go Backend (API & Publisher)
+# ==============================================================================
+
+# Stage 1: Build binaries
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /build
+
+# Install git and ca-certificates for fetching modules if needed
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Download dependencies using layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY cmd/ cmd/
+COPY internal/ internal/
+
+# Build statically-linked Linux binaries with stripped symbols
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s -extldflags '-static'" \
+    -o /build/bin/api ./cmd/api && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s -extldflags '-static'" \
+    -o /build/bin/publisher ./cmd/publisher
+
+# ==============================================================================
+# Stage 2: Minimal runtime image for SolvCommit API
+# ==============================================================================
+FROM alpine:3.21 AS api
+
+RUN apk add --no-cache ca-certificates tzdata curl && \
+    addgroup -S -g 10001 appgroup && \
+    adduser -S -u 10001 -G appgroup -h /app appuser
+
+WORKDIR /app
+
+# Copy binaries and migration SQL files
+COPY --from=builder --chown=appuser:appgroup /build/bin/api /app/api
+COPY --chown=appuser:appgroup migrations/ /app/migrations/
+
+USER appuser
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/api/v1/health/live || exit 1
+
+ENTRYPOINT ["/app/api"]
+
+# ==============================================================================
+# Stage 3: Minimal runtime image for SolvCommit Publisher Worker
+# ==============================================================================
+FROM alpine:3.21 AS publisher
+
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -S -g 10001 appgroup && \
+    adduser -S -u 10001 -G appgroup -h /app appuser
+
+WORKDIR /app
+
+COPY --from=builder --chown=appuser:appgroup /build/bin/publisher /app/publisher
+
+USER appuser
+
+ENTRYPOINT ["/app/publisher"]

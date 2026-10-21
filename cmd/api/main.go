@@ -45,6 +45,16 @@ func main() {
 	defer db.Close()
 	logger.Info("Connected to PostgreSQL successfully")
 
+	// Apply migrations if configured (useful for automated container deployment)
+	if cfg.AutoMigrate {
+		logger.Info("Auto-migration enabled; applying SQL migrations...", "dir", cfg.MigrationsDir)
+		if err := db.ApplyMigrations(ctx, cfg.MigrationsDir); err != nil {
+			logger.Error("Failed to apply database migrations", "error", err)
+			os.Exit(1)
+		}
+		logger.Info("Database migrations applied successfully")
+	}
+
 	// Kafka client
 	kafkaClient := queue.NewClient(cfg.KafkaBrokers, cfg.KafkaTopic)
 	if err := kafkaClient.Ping(ctx); err != nil {

@@ -1,0 +1,52 @@
+# Global Caddy options
+{
+    # In production, automatic HTTPS is enabled by default.
+    # For local testing without valid public DNS, set CADDY_GLOBAL_OPTIONS="auto_https off"
+    {$CADDY_GLOBAL_OPTIONS}
+    email {$CADDY_EMAIL:admin@solvcommit.dev}
+}
+
+# ------------------------------------------------------------------------------
+# Frontend Dashboard & Public Site
+# ------------------------------------------------------------------------------
+{$FRONTEND_DOMAIN:solvcommit.eterno.software} {
+    # Forward all UI and static requests to frontend Nginx container
+    reverse_proxy frontend:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # API fallback if API requests are made through the frontend origin
+    handle /api/* {
+        reverse_proxy api:8080 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}
+
+# ------------------------------------------------------------------------------
+# Dedicated API Endpoint Subdomain
+# ------------------------------------------------------------------------------
+{$API_DOMAIN:api.solvcommit.eterno.software} {
+    reverse_proxy api:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

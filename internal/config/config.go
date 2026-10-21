@@ -27,6 +27,8 @@ type Config struct {
 	SMTPUser             string
 	SMTPPass             string
 	EmailFrom            string
+	AutoMigrate          bool
+	MigrationsDir        string
 }
 
 // devSessionSecret is the insecure default used only in development.
@@ -54,6 +56,8 @@ func Load() (*Config, error) {
 		SMTPUser:         getEnv("SMTP_USER", ""),
 		SMTPPass:         getEnv("SMTP_PASS", ""),
 		EmailFrom:        getEnv("EMAIL_FROM", "noreply@solvcommit.dev"),
+		AutoMigrate:      getEnvBool("AUTO_MIGRATE", false),
+		MigrationsDir:    getEnv("MIGRATIONS_DIR", "migrations"),
 	}
 
 	brokersStr := getEnv("KAFKA_BROKERS", "localhost:9092")
@@ -99,6 +103,15 @@ func getEnvInt(key string, defaultVal int) int {
 	if val := os.Getenv(key); val != "" {
 		if n, err := strconv.Atoi(val); err == nil {
 			return n
+		}
+	}
+	return defaultVal
+}
+
+func getEnvBool(key string, defaultVal bool) bool {
+	if val := os.Getenv(key); val != "" {
+		if b, err := strconv.ParseBool(val); err == nil {
+			return b
 		}
 	}
 	return defaultVal

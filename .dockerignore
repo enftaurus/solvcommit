@@ -1,0 +1,21 @@
+# Docker ignore configuration for SolvCommit
+.git
+.github
+.idea
+.vscode
+*.env
+*.env.*
+!.env.example
+*.pem
+github-app.pem
+*.secret
+bin/
+dist/
+node_modules/
+web/node_modules/
+web/dist/
+*.log
+docs/
+*.md
+digest.txt
+spike/
