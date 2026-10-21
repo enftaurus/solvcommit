@@ -63,13 +63,25 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl animate-fadeIn">
+      {/* Page Heading */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Settings
+          </h1>
+          <p className="text-base text-slate-600 mt-1">
+            Manage your SolvCommit account, pipeline controls, and preferences.
+          </p>
+        </div>
+      </div>
+
       {/* Sync Pipeline Pause / Resume */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="text-base font-semibold text-slate-900">Pipeline Synchronization</h3>
+              <h3 className="text-base font-bold text-slate-900">Pipeline Synchronization</h3>
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
                   syncStatus.is_paused

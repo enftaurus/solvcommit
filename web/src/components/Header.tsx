@@ -1,13 +1,32 @@
 import React, { useState } from "react";
-import { Pause, Play, LogOut, Sparkles } from "lucide-react";
+import {
+  Pause,
+  Play,
+  LogOut,
+  Sparkles,
+  LayoutDashboard,
+  ListFilter,
+  FolderGit2,
+  Smartphone,
+  Settings,
+  Menu,
+  X,
+} from "lucide-react";
 import { UserProfile, SyncStatus } from "../types";
 import { api } from "../api";
+
+export type NavTab = "overview" | "submissions" | "repository" | "devices" | "settings";
 
 interface HeaderProps {
   user: UserProfile | null;
   syncStatus: SyncStatus | null;
   isOnline: boolean;
   isDemo?: boolean;
+  activeTab: NavTab;
+  onSelectTab: (tab: NavTab) => void;
+  totalSubmissions?: number;
+  activeDeviceCount?: number;
+  hasRepo?: boolean;
   onRefresh: () => void;
   onLogout: () => void;
   onExitDemo?: () => void;
@@ -18,11 +37,17 @@ export const Header: React.FC<HeaderProps> = ({
   syncStatus,
   isOnline,
   isDemo = false,
+  activeTab,
+  onSelectTab,
+  totalSubmissions = 0,
+  activeDeviceCount = 0,
+  hasRepo = false,
   onRefresh,
   onLogout,
   onExitDemo,
 }) => {
   const [isTogglingPause, setIsTogglingPause] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleTogglePause = async () => {
     if (!syncStatus || isTogglingPause) return;
@@ -41,49 +66,109 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const navItems: { id: NavTab; label: string; icon: React.ReactNode; badge?: React.ReactNode }[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      icon: <LayoutDashboard className="h-4 w-4" />,
+    },
+    {
+      id: "submissions",
+      label: "Submissions",
+      icon: <ListFilter className="h-4 w-4" />,
+      badge: totalSubmissions > 0 ? (
+        <span className="font-mono text-xs px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700">
+          {totalSubmissions}
+        </span>
+      ) : undefined,
+    },
+    {
+      id: "repository",
+      label: "Repository",
+      icon: <FolderGit2 className="h-4 w-4" />,
+      badge: hasRepo ? (
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title="Connected" />
+      ) : undefined,
+    },
+    {
+      id: "devices",
+      label: "Extensions",
+      icon: <Smartphone className="h-4 w-4" />,
+      badge: activeDeviceCount > 0 ? (
+        <span className="font-mono text-xs px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700">
+          {activeDeviceCount}
+        </span>
+      ) : undefined,
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <Settings className="h-4 w-4" />,
+    },
+  ];
+
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-zinc-200/80 bg-white/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-30 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-900 text-white shadow-sm">
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="16 18 22 12 16 6" />
-              <polyline points="8 6 2 12 8 18" />
-            </svg>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-semibold tracking-tight text-zinc-950">
-              SolvCommit
-            </span>
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 border border-zinc-200">
-              v1.0
-            </span>
-            {isDemo && (
-              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-200 flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-amber-600" />
-                Demo
+        {/* Brand & Logo */}
+        <div className="flex items-center gap-6">
+          <a href="/" className="flex items-center gap-2.5 group">
+            <div className="h-9 w-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shadow-xs group-hover:scale-105 transition">
+              <img
+                src="/logo.png"
+                alt="SolvCommit"
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                }}
+              />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-bold tracking-tight text-slate-900 group-hover:text-blue-600 transition">
+                SolvCommit
               </span>
-            )}
-          </div>
+              {isDemo && (
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 border border-amber-200 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-amber-600" />
+                  Demo
+                </span>
+              )}
+            </div>
+          </a>
+
+          {/* Desktop Navigation */}
+          {user && (
+            <nav className="hidden md:flex items-center space-x-1 pl-4 border-l border-slate-200">
+              {navItems.map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onSelectTab(item.id)}
+                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                    {item.badge}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
         </div>
 
-        {/* Center / Right controls */}
-        <div className="flex items-center gap-4">
-          {/* Health Status Indicator */}
+        {/* Right Controls */}
+        <div className="flex items-center gap-3">
+          {/* Health indicator */}
           <div
-            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border ${
+            className={`hidden sm:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border ${
               isOnline
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                : "bg-rose-50 text-rose-700 border-rose-200/60"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-rose-50 text-rose-700 border-rose-200"
             }`}
           >
             <span
@@ -91,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
                 isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
               }`}
             />
-            {isOnline ? "Pipeline Live" : "API Offline"}
+            <span>{isOnline ? "Pipeline Live" : "API Offline"}</span>
           </div>
 
           {user && syncStatus && (
@@ -100,43 +185,42 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={handleTogglePause}
                 disabled={isTogglingPause}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`hidden sm:inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
                   syncStatus.is_paused
                     ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 active:scale-95"
-                    : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200/80 active:scale-95"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95"
                 }`}
                 title={syncStatus.is_paused ? "Resume publishing" : "Pause publishing"}
               >
                 {syncStatus.is_paused ? (
                   <>
-                    <Play className="h-3.5 w-3.5 fill-amber-700" />
+                    <Play className="h-3 w-3 fill-amber-700" />
                     <span>Paused</span>
                   </>
                 ) : (
                   <>
-                    <Pause className="h-3.5 w-3.5" />
+                    <Pause className="h-3 w-3" />
                     <span>Sync Active</span>
                   </>
                 )}
               </button>
 
-              {/* User Dropdown / Logout */}
-              <div className="flex items-center gap-2 pl-2 border-l border-zinc-200">
-                <span className="text-xs text-zinc-500 hidden sm:inline">
+              {/* User Identity / Logout */}
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+                <span className="text-xs text-slate-500 font-medium hidden lg:inline">
                   {isDemo ? "demo-developer" : `User #${user.github_user_id}`}
                 </span>
                 {isDemo ? (
                   <button
                     onClick={onExitDemo}
-                    className="rounded-lg px-2 py-1 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition"
-                    title="Exit Demo Mode"
+                    className="rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition"
                   >
                     Exit Demo
                   </button>
                 ) : (
                   <button
                     onClick={onLogout}
-                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition"
+                    className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
                     title="Sign out"
                   >
                     <LogOut className="h-4 w-4" />
@@ -145,8 +229,48 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </>
           )}
+
+          {/* Mobile Menu Toggle */}
+          {user && (
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Mobile Navigation Drawer */}
+      {user && mobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-1">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onSelectTab(item.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
+                  isActive
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {item.icon}
+                  <span>{item.label}</span>
+                </div>
+                {item.badge}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </header>
   );
 };

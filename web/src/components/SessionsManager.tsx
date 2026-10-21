@@ -75,21 +75,38 @@ export const SessionsManager: React.FC<SessionsManagerProps> = ({
   const revokedDevices = devices.filter((d) => !!d.revoked_at);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl animate-fadeIn">
+      {/* Page Heading */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Extensions
+          </h1>
+          <p className="text-base text-slate-600 mt-1">
+            Browser extensions authorized to capture and sync accepted solutions.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Chrome & Firefox ready
+          </span>
+        </div>
+      </div>
+
       {/* Top Banner & Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center space-x-2">
-            <h2 className="text-lg font-semibold text-slate-900 tracking-tight">
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
               Paired Browser Extensions
             </h2>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
               {activeDevices.length} Active
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1 max-w-xl">
-            Devices authorized to capture and push accepted LeetCode submissions. Each device
-            uses short-lived rotated tokens with reuse breach protection.
+          <p className="text-sm text-slate-600 mt-1 max-w-xl">
+            Currently paired browser extensions. (Edge & Safari rolling out soon).
           </p>
         </div>
 

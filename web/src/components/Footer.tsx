@@ -29,7 +29,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Brand & Dynamic Copyright */}
         <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
-          <span className="font-semibold text-slate-800 text-sm tracking-tight">SolvCommit</span>
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="SolvCommit" className="h-full w-full object-cover" />
+            </div>
+            <span className="font-bold text-slate-900 text-sm tracking-tight">SolvCommit</span>
+          </div>
           <span className="hidden sm:inline text-slate-300">•</span>
           <span>© {currentYear} SolvCommit. All rights reserved.</span>
         </div>

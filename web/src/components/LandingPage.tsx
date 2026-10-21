@@ -4,12 +4,10 @@ import {
   ArrowRight,
   ShieldCheck,
   FolderGit2,
-  Lock,
-  Chrome,
-  Flame,
+  Code2,
   CheckCircle2,
-  Layers,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import { api } from "../api";
 import { Footer } from "./Footer";
@@ -36,17 +34,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200 flex flex-col justify-between">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
-              <FolderGit2 className="h-5 w-5" />
+            <div className="h-10 w-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shadow-xs">
+              <img
+                src="/logo.png"
+                alt="SolvCommit"
+                className="h-full w-full object-cover"
+              />
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="font-semibold text-base tracking-tight text-slate-900">SolvCommit</span>
-              <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
+            <div className="flex items-baseline space-x-2">
+              <span className="font-bold text-lg tracking-tight text-slate-900">
+                SolvCommit
+              </span>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                 v1.0
               </span>
             </div>
@@ -55,7 +59,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
           <div className="flex items-center space-x-3">
             <button
               onClick={onEnterDemo}
-              className="inline-flex items-center space-x-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/80 px-3.5 py-2 text-xs font-semibold text-slate-800 transition-colors shadow-2xs"
+              className="inline-flex items-center space-x-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-800 transition active:scale-98"
             >
               <Sparkles className="h-3.5 w-3.5 text-amber-500" />
               <span>Explore Demo</span>
@@ -63,9 +67,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
             <button
               onClick={handleSignIn}
               disabled={loading}
-              className="inline-flex items-center space-x-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800 active:scale-[0.99] transition-all shadow-xs"
+              className="inline-flex items-center space-x-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 active:scale-98 transition shadow-sm disabled:opacity-50"
             >
-              <Github className="h-3.5 w-3.5" />
+              <Github className="h-4 w-4" />
               <span>{loading ? "Connecting..." : "Sign in with GitHub"}</span>
             </button>
           </div>
@@ -73,172 +77,223 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-24">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-20 space-y-16">
         <div className="text-center max-w-3xl mx-auto space-y-6">
           {/* Badge */}
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-xs text-xs font-medium text-slate-700">
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-2xs text-xs font-semibold text-slate-700">
             <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Cross-Browser Manifest V3 · Chrome & Firefox</span>
+            <span>Chrome & Firefox extensions supported • Edge & Safari rolling out soon</span>
           </div>
 
           {/* Heading */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-950 leading-[1.15]">
-            Publish every accepted LeetCode submission to GitHub.
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.12]">
+            Your accepted solutions. Automatically on GitHub.
           </h1>
 
           {/* Subheading */}
-          <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto font-normal">
-            Zero LeetCode credentials stored. Source code buffered strictly in Kafka with 7-day
-            retention. Idempotent git-tree publishing that never overwrites existing work.
+          <p className="text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto font-normal">
+            Connect your GitHub repository and let SolvCommit organize your accepted LeetCode solutions automatically.
           </p>
 
           {/* CTA Group */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              onClick={onEnterDemo}
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2.5 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.99] transition-all shadow-sm"
-            >
-              <Sparkles className="h-4 w-4 text-amber-300" />
-              <span>Explore Interactive Demo</span>
-              <ArrowRight className="h-4 w-4 text-slate-400" />
-            </button>
-
+          <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <button
               onClick={handleSignIn}
               disabled={loading}
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 rounded-xl bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 transition-colors shadow-xs"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2.5 rounded-xl bg-slate-900 px-7 py-3.5 text-base font-semibold text-white hover:bg-slate-800 active:scale-98 transition shadow-sm disabled:opacity-50"
             >
-              <Github className="h-4 w-4" />
-              <span>{loading ? "Redirecting..." : "Connect GitHub App"}</span>
+              <Github className="h-5 w-5" />
+              <span>{loading ? "Connecting..." : "Get started with GitHub"}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+
+            <button
+              onClick={onEnterDemo}
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 rounded-xl border border-slate-300/90 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 hover:bg-slate-50 active:scale-98 transition shadow-2xs"
+            >
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              <span>Explore demo</span>
             </button>
           </div>
-
-          {/* Supported Browsers Pill */}
-          <div className="pt-4 flex items-center justify-center space-x-6 text-xs text-slate-500">
-            <span className="flex items-center space-x-1.5">
-              <Chrome className="h-4 w-4 text-slate-700" />
-              <span>Google Chrome & Chromium</span>
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="flex items-center space-x-1.5">
-              <Flame className="h-4 w-4 text-orange-500" />
-              <span>Mozilla Firefox</span>
-            </span>
-          </div>
         </div>
 
-        {/* Visual Preview / Directory Tree Card */}
-        <div className="mt-16 bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden max-w-4xl mx-auto">
-          <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className="h-3 w-3 rounded-full bg-slate-300" />
-              <span className="h-3 w-3 rounded-full bg-slate-300" />
-              <span className="h-3 w-3 rounded-full bg-slate-300" />
-              <span className="ml-2 font-mono text-xs text-slate-500">
-                github.com/user/leetcode-submissions
+        {/* Product Preview Card */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden max-w-4xl mx-auto">
+          {/* Mock Window Top Bar */}
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+            <div className="flex items-center space-x-2.5">
+              <span className="h-3 w-3 rounded-full bg-rose-400" />
+              <span className="h-3 w-3 rounded-full bg-amber-400" />
+              <span className="h-3 w-3 rounded-full bg-emerald-400" />
+              <span className="ml-3 font-mono text-xs text-slate-500 font-medium">
+                github.com/developer/leetcode-submissions
               </span>
             </div>
-            <span className="text-[11px] font-mono text-slate-400">git branch: main</span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Synced to GitHub</span>
+              </span>
+            </div>
           </div>
 
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white">
-            <div className="space-y-3 font-mono text-xs">
-              <div className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                Deterministic Repository Structure
+          {/* Interactive Preview Body */}
+          <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            {/* Mascot Showcase Column */}
+            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-gradient-to-b from-blue-50/50 to-indigo-50/30 border border-blue-100">
+              <div className="h-32 w-32 rounded-2xl overflow-hidden border border-slate-800/10 shadow-md">
+                <img
+                  src="/logo.png"
+                  alt="SolvCommit Mascot"
+                  className="h-full w-full object-cover"
+                />
               </div>
-              <div className="rounded-xl bg-slate-900 p-4 text-slate-200 space-y-1.5">
-                <div className="text-emerald-400">leetcode-submissions/</div>
-                <div className="pl-4 text-slate-300">├── README.md</div>
-                <div className="pl-4 text-slate-400">└── problems/</div>
-                <div className="pl-8 text-slate-300">├── two-sum/</div>
-                <div className="pl-12 text-blue-400">├── solution.py</div>
-                <div className="pl-12 text-slate-400">└── README.md</div>
-                <div className="pl-8 text-slate-300">├── median-of-two-sorted-arrays/</div>
-                <div className="pl-12 text-amber-400">├── solution.go</div>
-                <div className="pl-12 text-slate-400">└── README.md</div>
-              </div>
+              <h3 className="text-base font-bold text-slate-900 mt-4">
+                Automated Solution Sync
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Zero manual copying. Keeps your GitHub commit graph active.
+              </p>
             </div>
 
-            <div className="space-y-3 flex flex-col justify-center">
-              <div className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                Publishing Guarantees
+            {/* Mock Repository Activity Feed */}
+            <div className="md:col-span-2 space-y-3 font-mono text-xs">
+              <div className="text-slate-400 font-semibold uppercase tracking-wider text-[11px] font-sans">
+                Recent Synced Solutions
               </div>
-              <ul className="space-y-3 text-xs text-slate-600">
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Non-destructive commits:</strong> Existing READMEs and solution files
-                    are strictly preserved. Git blob SHAs prevent duplicate commits.
+
+              {/* Solution 1 */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/60 transition shadow-2xs">
+                <div className="flex items-center space-x-3">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                    AC
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900 font-sans text-sm">
+                      1. Two Sum
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      two-sum/solution-2138016677.py
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-semibold">
+                    Python3
                   </span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Multi-language support:</strong> Python, Go, C++, TypeScript, Rust,
-                    Java, C#, Swift, and SQL are automatically organized into language extensions.
+                  <span className="text-slate-400 text-[11px]">2m ago</span>
+                </div>
+              </div>
+
+              {/* Solution 2 */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/60 transition shadow-2xs">
+                <div className="flex items-center space-x-3">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                    AC
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900 font-sans text-sm">
+                      146. LRU Cache
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      lru-cache/solution-2138016682.go
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 text-xs font-semibold">
+                    Go
                   </span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Serialized Git commits:</strong> Per-repo mutex queues protect against
-                    GitHub Git commit conflicts and API rate limits.
+                  <span className="text-slate-400 text-[11px]">18m ago</span>
+                </div>
+              </div>
+
+              {/* Solution 3 */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/60 transition shadow-2xs">
+                <div className="flex items-center space-x-3">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                    AC
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900 font-sans text-sm">
+                      42. Trapping Rain Water
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      trapping-rain-water/solution-2138016690.cpp
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-xs font-semibold">
+                    C++
                   </span>
-                </li>
-              </ul>
+                  <span className="text-slate-400 text-[11px]">1h ago</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Non-Negotiable Architecture Pillars */}
-        <div id="architecture" className="mt-24 space-y-8">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              Engineered for Privacy & Zero Credential Custody
+        {/* Feature Section (User-Facing Benefits) */}
+        <div className="space-y-8 max-w-5xl mx-auto pt-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Built for seamless developer workflows
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-2">
-              Every design decision prioritizes privacy, security, and idempotence.
+            <p className="text-base text-slate-600 max-w-2xl mx-auto">
+              Focus on solving algorithms while SolvCommit organizes your repository in the background.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-colors space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-800">
-                <Lock className="h-5 w-5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Benefit 1 */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="h-11 w-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Zap className="h-6 w-6" />
               </div>
-              <h3 className="text-sm font-semibold text-slate-900">Zero LeetCode Credentials</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                The server never logs into LeetCode. Your browser extension reads submissions
-                directly inside your active authenticated tab and pushes the accepted result.
+              <h3 className="text-base font-bold text-slate-900">Automatic Syncing</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Accepted submissions trigger commits immediately from your active tab without clicking buttons.
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-colors space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-800">
-                <Layers className="h-5 w-5" />
+            {/* Benefit 2 */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <FolderGit2 className="h-6 w-6" />
               </div>
-              <h3 className="text-sm font-semibold text-slate-900">Source Code Only in Kafka</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                PostgreSQL holds thin metadata and pipeline state only. Problem source code lives
-                strictly in Kafka messages with 7-day retention and is purged once committed.
+              <h3 className="text-base font-bold text-slate-900">Organized Codebase</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Deterministic folder structures with problem slugs, language extensions, and solution indices.
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-colors space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-800">
-                <ShieldCheck className="h-5 w-5" />
+            {/* Benefit 3 */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="h-11 w-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Code2 className="h-6 w-6" />
               </div>
-              <h3 className="text-sm font-semibold text-slate-900">Token Rotation & Reuse Breach Protection</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Extension refresh tokens are stored only as SHA-256 hashes and rotate on every call.
-                Attempted token reuse automatically revokes the entire token family.
+              <h3 className="text-base font-bold text-slate-900">Multi-Language</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Supports Python, Java, C++, Go, TypeScript, JavaScript, Rust, SQL, and all official LeetCode runtimes.
+              </p>
+            </div>
+
+            {/* Benefit 4 */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="h-11 w-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Privacy Conscious</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Zero LeetCode password custody. You retain 100% intellectual property of your code.
               </p>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Site-wide Footer */}
+      {/* Clean Footer */}
       <Footer />
     </div>
   );

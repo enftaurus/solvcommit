@@ -1,11 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  LayoutDashboard,
-  ListFilter,
-  FolderGit2,
-  Smartphone,
-  Settings,
-  RefreshCw,
   CheckCircle2,
   AlertCircle,
   X,
@@ -315,12 +309,17 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Top Header */}
+      {/* Top Header with Integrated Navigation */}
       <Header
         user={user}
         syncStatus={syncStatus}
         isOnline={isOnline}
         isDemo={isDemoMode}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        totalSubmissions={totalSubmissions}
+        activeDeviceCount={activeDeviceCount}
+        hasRepo={Boolean(repo)}
         onRefresh={loadDashboardData}
         onLogout={handleLogout}
         onExitDemo={handleExitDemo}
@@ -328,128 +327,26 @@ export const App: React.FC = () => {
 
       {/* Connect GitHub App Banner if not connected */}
       {user && !user.installation_connected && !isDemoMode && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-xs text-amber-900">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <div className="flex items-center space-x-2">
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 text-sm text-amber-900">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-2.5">
               <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
               <span>
-                <strong>GitHub App not connected:</strong> Install the GitHub App to allow SolvCommit to sync solutions to your repository.
+                <strong>GitHub App not connected:</strong> Install the SolvCommit GitHub App to allow automatic commits to your repository.
               </span>
             </div>
             <a
               href="/api/v1/auth/github/start"
-              className="inline-flex items-center gap-1 rounded-md bg-zinc-900 px-3 py-1 font-medium text-white shadow-xs hover:bg-zinc-800 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-slate-800 transition"
             >
-              Connect GitHub
+              Connect GitHub App
             </a>
           </div>
         </div>
       )}
 
       {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Navigation Tabs Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-4">
-          <nav className="flex items-center space-x-1 overflow-x-auto py-0.5">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                activeTab === "overview"
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
-              }`}
-            >
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              <span>Overview</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("submissions")}
-              className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                activeTab === "submissions"
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
-              }`}
-            >
-              <ListFilter className="h-3.5 w-3.5" />
-              <span>Submissions</span>
-              {totalSubmissions > 0 && (
-                <span
-                  className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                    activeTab === "submissions"
-                      ? "bg-slate-800 text-slate-200"
-                      : "bg-slate-200/70 text-slate-700"
-                  }`}
-                >
-                  {totalSubmissions}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("repository")}
-              className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                activeTab === "repository"
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
-              }`}
-            >
-              <FolderGit2 className="h-3.5 w-3.5" />
-              <span>Repository</span>
-              {repo && (
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title="Connected" />
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("devices")}
-              className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                activeTab === "devices"
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
-              }`}
-            >
-              <Smartphone className="h-3.5 w-3.5" />
-              <span>Extensions</span>
-              {activeDeviceCount > 0 && (
-                <span
-                  className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                    activeTab === "devices"
-                      ? "bg-slate-800 text-slate-200"
-                      : "bg-slate-200/70 text-slate-700"
-                  }`}
-                >
-                  {activeDeviceCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-                activeTab === "settings"
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
-              }`}
-            >
-              <Settings className="h-3.5 w-3.5" />
-              <span>Settings</span>
-            </button>
-          </nav>
-
-          {/* Refresh Action */}
-          <div className="flex items-center space-x-2 self-end sm:self-center">
-            <button
-              onClick={loadDashboardData}
-              disabled={loadingData}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/60 transition-colors"
-              title="Refresh all metrics and submissions"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loadingData ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-          </div>
-        </div>
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
         {/* Tab Viewport */}
         <main className="transition-opacity duration-200">

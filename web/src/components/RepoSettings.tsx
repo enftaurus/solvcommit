@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   GitBranch,
   ShieldCheck,
@@ -9,6 +9,14 @@ import {
   FolderGit2,
   Sparkles,
   RefreshCw,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+  Globe,
+  ArrowRight,
+  HelpCircle,
+  Check,
 } from "lucide-react";
 import { Repository, GitHubRepoInfo } from "../types";
 import { api } from "../api";
@@ -29,8 +37,12 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
   const [defaultBranch, setDefaultBranch] = useState<string>(
     currentRepo ? currentRepo.default_branch : "main"
   );
+  const [isChangingRepo, setIsChangingRepo] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshingRepos, setIsRefreshingRepos] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<{
     success: boolean;
     text: string;
@@ -40,12 +52,19 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
     loadAvailableRepos();
   }, []);
 
+  useEffect(() => {
+    if (currentRepo) {
+      setSelectedRepoId(currentRepo.github_repo_id);
+      setDefaultBranch(currentRepo.default_branch || "main");
+    }
+  }, [currentRepo]);
+
   const loadAvailableRepos = async () => {
     try {
+      setIsRefreshingRepos(true);
       const repos = await api.listGitHubRepos();
       setAvailableRepos(repos);
       if (!selectedRepoId && repos.length > 0) {
-        // Auto-select preferred default repository: leetcode-submissions
         const preferred = repos.find(
           (r) =>
             r.name.toLowerCase() === "leetcode-submissions" ||
@@ -58,8 +77,20 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
       }
     } catch (err: any) {
       console.warn("Could not list repos automatically:", err);
+    } finally {
+      setIsRefreshingRepos(false);
     }
   };
+
+  const filteredRepos = useMemo(() => {
+    if (!searchQuery.trim()) return availableRepos;
+    const q = searchQuery.toLowerCase();
+    return availableRepos.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.owner.toLowerCase().includes(q)
+    );
+  }, [availableRepos, searchQuery]);
 
   const handleSaveRepo = async () => {
     if (!selectedRepoId) return;
@@ -77,8 +108,9 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
       });
       setVerifyMessage({
         success: true,
-        text: "Repository successfully updated and verified!",
+        text: "Destination repository successfully saved and verified!",
       });
+      setIsChangingRepo(false);
       onRepoUpdated();
     } catch (err: any) {
       setVerifyMessage({
@@ -90,14 +122,6 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
     }
   };
 
-  const [isRefreshingRepos, setIsRefreshingRepos] = useState(false);
-
-  const handleRefreshList = async () => {
-    setIsRefreshingRepos(true);
-    await loadAvailableRepos();
-    setIsRefreshingRepos(false);
-  };
-
   const handleVerify = async () => {
     setIsVerifying(true);
     setVerifyMessage(null);
@@ -105,7 +129,7 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
       await api.verifyRepo();
       setVerifyMessage({
         success: true,
-        text: "Server verified write and metadata access on repository.",
+        text: "Repository connection verified. SolvCommit has write access.",
       });
     } catch (err: any) {
       setVerifyMessage({
@@ -117,261 +141,387 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
     }
   };
 
+  const getStatusBadge = () => {
+    if (currentRepo && currentRepo.status === "active") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Connected
+        </span>
+      );
+    }
+    if (availableRepos.length === 0) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+          Setup required
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+        Setup required
+      </span>
+    );
+  };
+
+  const isConfigured = Boolean(currentRepo && !isChangingRepo);
+
   return (
-    <div className="space-y-6 max-w-3xl animate-fadeIn">
-      {/* Current Repo Card */}
-      <div className="rounded-xl border border-zinc-200/90 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center gap-3 pb-4 border-b border-zinc-100">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 text-zinc-800 border border-zinc-200">
-            <FolderGit2 className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-900">
-              Destination GitHub Repository
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Where your accepted LeetCode submissions will be committed.
-            </p>
-          </div>
+    <div className="space-y-8 max-w-4xl animate-fadeIn">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Repository
+          </h1>
+          <p className="text-base text-slate-600 mt-1">
+            Choose where your accepted solutions are saved.
+          </p>
         </div>
-
-        {currentRepo ? (
-          <div className="mt-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg bg-zinc-50/80 p-4 border border-zinc-200/80">
-              <div>
-                <div className="text-xs font-medium text-zinc-400">Current Destination</div>
-                <div className="text-base font-semibold text-zinc-900 mt-0.5">
-                  {currentRepo.owner}/{currentRepo.name}
-                </div>
-                <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500">
-                  <GitBranch className="h-3.5 w-3.5 text-zinc-400" />
-                  <span>Branch: <span className="font-mono text-zinc-800">{currentRepo.default_branch}</span></span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleVerify}
-                  disabled={isVerifying}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-2xs hover:bg-zinc-50 active:scale-95 transition"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5 text-zinc-600" />
-                  <span>{isVerifying ? "Verifying..." : "Verify Access"}</span>
-                </button>
-                <a
-                  href={`https://github.com/${currentRepo.owner}/${currentRepo.name}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white p-1.5 text-zinc-500 hover:text-zinc-800 transition"
-                  title="Open on GitHub"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-            </div>
-
-            {verifyMessage && (
-              <div
-                className={`flex items-center gap-2 rounded-lg p-3 text-xs border ${
-                  verifyMessage.success
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200/70"
-                    : "bg-rose-50 text-rose-800 border-rose-200/70"
-                }`}
-              >
-                {verifyMessage.success ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-                )}
-                <span>{verifyMessage.text}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="py-4 text-xs text-zinc-500 space-y-3">
-            <p>No repository configured yet. Select one from your authorized GitHub App repositories below, or create the default repository.</p>
-            {verifyMessage && (
-              <div
-                className={`flex items-center gap-2 rounded-lg p-3 text-xs border ${
-                  verifyMessage.success
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200/70"
-                    : "bg-rose-50 text-rose-800 border-rose-200/70"
-                }`}
-              >
-                {verifyMessage.success ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-                )}
-                <span>{verifyMessage.text}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Step-by-Step GitHub App Permission & Setup Guide */}
-      <div className="rounded-xl border border-blue-200/90 bg-gradient-to-br from-blue-50/70 to-indigo-50/40 p-5 space-y-4 text-xs text-blue-950 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 font-semibold text-sm text-blue-900">
-            <ShieldCheck className="h-4.5 w-4.5 text-blue-600 shrink-0" />
-            <span>GitHub App Permissions & Setup Guide</span>
-          </div>
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 w-fit">
-            <span>Default Repo:</span>
-            <code className="font-mono font-semibold">leetcode-submissions</code>
-          </span>
-        </div>
-
-        <p className="text-blue-900/90 leading-relaxed">
-          When allowing SolvCommit access to GitHub, the app requires permission for your destination repository to automatically commit solutions. Follow these 3 steps:
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-          {/* Step 1 */}
-          <div className="bg-white/90 p-4 rounded-xl border border-blue-100 shadow-2xs space-y-2.5 flex flex-col justify-between">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px]">
-                  1
-                </span>
-                <span className="font-semibold text-zinc-900">Create Repository</span>
-              </div>
-              <p className="text-[11px] text-zinc-600 leading-normal">
-                Create a repo named <code className="font-mono bg-zinc-100 px-1 py-0.5 rounded text-zinc-800 font-semibold">leetcode-submissions</code> on GitHub (Private or Public).
-              </p>
-            </div>
-            <a
-              href="https://github.com/new?name=leetcode-submissions&description=LeetCode%20submissions%20synced%20automatically%20by%20SolvCommit&visibility=private"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-zinc-800 transition"
-            >
-              <Sparkles className="h-3 w-3 text-amber-400" />
-              <span>Create on GitHub</span>
-              <ExternalLink className="h-2.5 w-2.5 text-zinc-400" />
-            </a>
-          </div>
-
-          {/* Step 2 */}
-          <div className="bg-white/90 p-4 rounded-xl border border-blue-100 shadow-2xs space-y-2.5 flex flex-col justify-between">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px]">
-                  2
-                </span>
-                <span className="font-semibold text-zinc-900">Grant Permission</span>
-              </div>
-              <p className="text-[11px] text-zinc-600 leading-normal">
-                When allowing access on GitHub:
-                <br />
-                • Choose <strong>"All repositories"</strong> (simplest), <em>OR</em>
-                <br />
-                • Choose <strong>"Only select repositories"</strong> and explicitly choose <code className="font-mono bg-zinc-100 px-1 py-0.5 rounded text-zinc-800">leetcode-submissions</code>.
-              </p>
-            </div>
-            <a
-              href="https://github.com/settings/installations"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50 transition"
-            >
-              <span>GitHub App Settings</span>
-              <ExternalLink className="h-2.5 w-2.5 text-zinc-400" />
-            </a>
-          </div>
-
-          {/* Step 3 */}
-          <div className="bg-white/90 p-4 rounded-xl border border-blue-100 shadow-2xs space-y-2.5 flex flex-col justify-between">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px]">
-                  3
-                </span>
-                <span className="font-semibold text-zinc-900">Save Destination</span>
-              </div>
-              <p className="text-[11px] text-zinc-600 leading-normal">
-                Select <code className="font-mono bg-zinc-100 px-1 py-0.5 rounded text-zinc-800">leetcode-submissions</code> below and click <strong>Save Destination</strong>.
-              </p>
-            </div>
-            <button
-              onClick={handleRefreshList}
-              disabled={isRefreshingRepos}
-              className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-1.5 text-[11px] font-medium text-blue-800 hover:bg-blue-100/80 transition"
-            >
-              <RefreshCw className={`h-3 w-3 ${isRefreshingRepos ? "animate-spin text-blue-500" : "text-blue-600"}`} />
-              <span>Refresh Repository List</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="pt-2 border-t border-blue-200/60 flex items-start sm:items-center gap-2 text-[11px] text-blue-900">
-          <AlertCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5 sm:mt-0" />
-          <span>
-            <strong>Note on permissions:</strong> If you created the repository after installing SolvCommit, GitHub does not grant access automatically unless "All repositories" is selected. Add it anytime at{" "}
-            <a
-              href="https://github.com/settings/installations"
-              target="_blank"
-              rel="noreferrer"
-              className="underline font-semibold hover:text-blue-950 inline-flex items-center gap-0.5"
-            >
-              <span>github.com/settings/installations</span>
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>
-            , then click <strong>Refresh</strong>.
-          </span>
+        <div className="flex items-center gap-3">
+          {getStatusBadge()}
         </div>
       </div>
 
-      {/* Select / Change Repo Card */}
-      <div className="rounded-xl border border-zinc-200/90 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-zinc-900">
-            Select Destination Repository
-          </h3>
+      {/* Global Status Message */}
+      {verifyMessage && (
+        <div
+          className={`flex items-start gap-3 p-4 rounded-xl text-sm border transition-all ${
+            verifyMessage.success
+              ? "bg-emerald-50/80 text-emerald-900 border-emerald-200"
+              : "bg-rose-50/80 text-rose-900 border-rose-200"
+          }`}
+        >
+          {verifyMessage.success ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
+          ) : (
+            <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
+          )}
+          <div className="flex-1">
+            <span className="font-medium">{verifyMessage.text}</span>
+          </div>
           <button
-            onClick={loadAvailableRepos}
-            disabled={isLoading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
-            title="Reload repository list from GitHub"
+            onClick={() => setVerifyMessage(null)}
+            className="text-xs text-slate-400 hover:text-slate-600 font-medium"
           >
-            <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin text-zinc-400" : "text-zinc-600"}`} />
-            <span>Reload Repositories</span>
+            Dismiss
           </button>
         </div>
+      )}
 
-        {availableRepos.length > 0 ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-zinc-700 mb-1.5">
-                Authorized Repositories (Permitted by GitHub App)
-              </label>
-              <select
-                value={selectedRepoId || ""}
-                onChange={(e) => {
-                  const id = Number(e.target.value);
-                  setSelectedRepoId(id);
-                  const found = availableRepos.find((r) => r.id === id);
-                  if (found) setDefaultBranch(found.default_branch || "main");
-                }}
-                className="w-full rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-900 focus:border-zinc-400 focus:outline-none transition shadow-sm"
+      {/* Primary State 1: Connected Repository Card */}
+      {isConfigured && currentRepo && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <FolderGit2 className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-xl font-bold text-slate-900">
+                    {currentRepo.owner}/{currentRepo.name}
+                  </h2>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                    <Lock className="h-3 w-3 text-slate-500" />
+                    Private
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                  <span className="flex items-center gap-1.5">
+                    <GitBranch className="h-4 w-4 text-slate-400" />
+                    Branch: <strong className="font-mono text-slate-800">{currentRepo.default_branch}</strong>
+                  </span>
+                  <span className="text-slate-300">•</span>
+                  <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                    <Check className="h-4 w-4 text-emerald-500" />
+                    Write access active
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleVerify}
+                disabled={isVerifying}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition active:scale-98 disabled:opacity-50"
               >
-                {availableRepos.map((r) => {
-                  const isDefault =
+                <ShieldCheck className={`h-4 w-4 text-slate-500 ${isVerifying ? "animate-spin" : ""}`} />
+                <span>{isVerifying ? "Verifying..." : "Verify Access"}</span>
+              </button>
+
+              <a
+                href={`https://github.com/${currentRepo.owner}/${currentRepo.name}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition active:scale-98"
+              >
+                <span>View on GitHub</span>
+                <ExternalLink className="h-4 w-4 text-slate-400" />
+              </a>
+
+              <button
+                onClick={() => setIsChangingRepo(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition active:scale-98 shadow-sm"
+              >
+                <span>Change repository</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
+            <div>
+              <span className="text-slate-400 font-medium text-xs block mb-1">Target Directory Format</span>
+              <code className="font-mono text-xs bg-white px-2 py-1 rounded border border-slate-200 text-slate-800">
+                &lt;problem-slug&gt;/solution-&lt;id&gt;.&lt;ext&gt;
+              </code>
+            </div>
+            <div>
+              <span className="text-slate-400 font-medium text-xs block mb-1">Automatic Documentation</span>
+              <span className="text-slate-700 text-xs">Updates repository README with a live solutions index badge.</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Primary State 2: First-Time Setup (When no repo is configured) */}
+      {!currentRepo && !isChangingRepo && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-slate-900">
+              Connect Your Destination Repository
+            </h2>
+            <p className="text-base text-slate-600">
+              Complete these 3 simple steps to start committing accepted solutions automatically.
+            </p>
+          </div>
+
+          {/* 3-Step Setup Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Step 1 */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-6 w-6 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+                    1
+                  </span>
+                  <h3 className="font-semibold text-slate-900 text-base">Create Repository</h3>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Create a new repository named <strong className="text-slate-800">leetcode-submissions</strong> on GitHub (Public or Private).
+                </p>
+              </div>
+              <a
+                href="https://github.com/new?name=leetcode-submissions&description=LeetCode%20submissions%20synced%20automatically%20by%20SolvCommit&visibility=private"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition active:scale-98 shadow-sm"
+              >
+                <Sparkles className="h-4 w-4 text-amber-400" />
+                <span>Create on GitHub</span>
+                <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+              </a>
+            </div>
+
+            {/* Step 2 */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-6 w-6 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+                    2
+                  </span>
+                  <h3 className="font-semibold text-slate-900 text-base">Grant Access</h3>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  In GitHub App settings, choose <strong>"All repositories"</strong> or select <strong className="text-slate-800">leetcode-submissions</strong>.
+                </p>
+              </div>
+              <a
+                href="https://github.com/settings/installations"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition active:scale-98"
+              >
+                <span>GitHub App Settings</span>
+                <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+              </a>
+            </div>
+
+            {/* Step 3 */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-6 w-6 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+                    3
+                  </span>
+                  <h3 className="font-semibold text-slate-900 text-base">Select & Save</h3>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Select <strong className="text-slate-800">leetcode-submissions</strong> from the authorized list below and save.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsChangingRepo(true)}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500 transition active:scale-98 shadow-sm"
+              >
+                <span>Select Repository</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Focused Repository Selection Interface (When Change Repository is clicked or First Setup) */}
+      {(isChangingRepo || !currentRepo) && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                {currentRepo ? "Switch Destination Repository" : "Select Destination Repository"}
+              </h2>
+              <p className="text-sm text-slate-500">
+                Select from repositories authorized through your GitHub App installation.
+              </p>
+            </div>
+            {currentRepo && (
+              <button
+                onClick={() => setIsChangingRepo(false)}
+                className="text-sm font-medium text-slate-500 hover:text-slate-800 transition"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-5">
+            {/* Search and Refresh bar */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter repositories..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
+                />
+              </div>
+
+              <button
+                onClick={loadAvailableRepos}
+                disabled={isRefreshingRepos}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition active:scale-98 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 text-slate-500 ${isRefreshingRepos ? "animate-spin" : ""}`} />
+                <span>{isRefreshingRepos ? "Refreshing..." : "Refresh List"}</span>
+              </button>
+            </div>
+
+            {/* Repositories List */}
+            {filteredRepos.length > 0 ? (
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {filteredRepos.map((r) => {
+                  const isSelected = selectedRepoId === r.id;
+                  const isRecommended =
                     r.name.toLowerCase() === "leetcode-submissions" ||
                     r.name.toLowerCase() === "leetcode_submissions" ||
                     r.name.toLowerCase() === "leetcode-solutions";
+
                   return (
-                    <option key={r.id} value={r.id}>
-                      {r.owner}/{r.name} {isDefault ? "★ (Recommended Default)" : ""} {r.private ? "(Private)" : "(Public)"}
-                    </option>
+                    <div
+                      key={r.id}
+                      onClick={() => {
+                        setSelectedRepoId(r.id);
+                        setDefaultBranch(r.default_branch || "main");
+                      }}
+                      className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition ${
+                        isSelected
+                          ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900"
+                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <FolderGit2 className={`h-5 w-5 ${isSelected ? "text-slate-900" : "text-slate-400"}`} />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-900">
+                              {r.owner}/{r.name}
+                            </span>
+                            {isRecommended && (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                Recommended
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-500">
+                            Default branch: {r.default_branch || "main"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400">
+                          {r.private ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Lock className="h-3 w-3" /> Private
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <Globe className="h-3 w-3" /> Public
+                            </span>
+                          )}
+                        </span>
+                        <div
+                          className={`h-5 w-5 rounded-full border flex items-center justify-center ${
+                            isSelected
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-300 bg-white"
+                          }`}
+                        >
+                          {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </select>
-            </div>
+              </div>
+            ) : (
+              <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 space-y-3">
+                <FolderGit2 className="h-8 w-8 text-slate-400 mx-auto" />
+                <p className="text-sm text-slate-600">
+                  {searchQuery
+                    ? `No repositories matching "${searchQuery}"`
+                    : "No authorized repositories found."}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <a
+                    href="https://github.com/new?name=leetcode-submissions&description=LeetCode%20submissions%20synced%20automatically%20by%20SolvCommit&visibility=private"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Create 'leetcode-submissions'</span>
+                  </a>
+                  <a
+                    href="https://github.com/settings/installations"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                  >
+                    <span>Add Permissions in GitHub</span>
+                    <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                  </a>
+                </div>
+              </div>
+            )}
 
-            <div>
-              <label className="block text-xs font-medium text-zinc-700 mb-1.5">
+            {/* Target Branch Input */}
+            <div className="pt-2">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                 Target Branch
               </label>
               <input
@@ -379,93 +529,99 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
                 value={defaultBranch}
                 onChange={(e) => setDefaultBranch(e.target.value)}
                 placeholder="main"
-                className="w-full rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-900 focus:border-zinc-400 focus:outline-none font-mono transition shadow-sm"
+                className="w-full max-w-xs px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono text-slate-900 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition"
               />
             </div>
 
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+            {/* Save Buttons */}
+            <div className="pt-4 flex items-center gap-3 border-t border-slate-100">
               <button
                 onClick={handleSaveRepo}
-                disabled={isLoading}
-                className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-zinc-800 active:scale-95 transition"
+                disabled={isLoading || !selectedRepoId}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition active:scale-98 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Save className="h-3.5 w-3.5" />
-                <span>{isLoading ? "Saving..." : "Save Destination"}</span>
+                <Save className="h-4 w-4" />
+                <span>{isLoading ? "Saving..." : "Save Repository"}</span>
               </button>
 
-              <a
-                href="https://github.com/new?name=leetcode-submissions&description=LeetCode%20submissions%20synced%20automatically%20by%20SolvCommit&visibility=private"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <span>Create 'leetcode-submissions' on GitHub</span>
-                <ExternalLink className="h-3 w-3 text-zinc-400" />
-              </a>
-
-              <button
-                onClick={handleRefreshList}
-                disabled={isRefreshingRepos}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingRepos ? "animate-spin text-zinc-400" : "text-zinc-600"}`} />
-                <span>I created it, refresh list</span>
-              </button>
+              {currentRepo && (
+                <button
+                  onClick={() => setIsChangingRepo(false)}
+                  className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition"
+                >
+                  Cancel
+                </button>
+              )}
             </div>
-            <p className="text-[11px] text-zinc-400 pt-1">
-              Choose "All repositories" when installing the app, or add the new repo to the installation at{" "}
-              <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="underline hover:text-zinc-600">
-                github.com/settings/installations
-              </a>
-              , otherwise it will not appear in the list.
-            </p>
           </div>
-        ) : (
-          <div className="rounded-lg bg-zinc-50 p-5 text-xs text-zinc-600 border border-zinc-200/60 space-y-3">
-            <div className="font-medium text-zinc-800">No destination repository found in authorized list.</div>
-            <p className="text-zinc-500 leading-relaxed">
-              Create the default <code className="font-mono font-semibold bg-zinc-200/80 px-1 py-0.5 rounded text-zinc-800">leetcode-submissions</code> repository on GitHub, grant the SolvCommit GitHub App permission to access it, and refresh this list.
-            </p>
-            <div className="pt-1 flex flex-wrap items-center gap-3">
-              <a
-                href="https://github.com/new?name=leetcode-submissions&description=LeetCode%20submissions%20synced%20automatically%20by%20SolvCommit&visibility=private"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800 active:scale-95 transition"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                <span>Create 'leetcode-submissions' on GitHub</span>
-                <ExternalLink className="h-3 w-3 text-zinc-300" />
-              </a>
-              <button
-                onClick={handleRefreshList}
-                disabled={isRefreshingRepos}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 active:scale-95 transition shadow-2xs"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingRepos ? "animate-spin text-zinc-400" : "text-zinc-600"}`} />
-                <span>I created it, refresh list</span>
-              </button>
+        </div>
+      )}
+
+      {/* Collapsible Advanced Information: How Repository Access Works */}
+      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <button
+          onClick={() => setIsHelpOpen(!isHelpOpen)}
+          className="w-full p-5 flex items-center justify-between text-left hover:bg-slate-50/50 transition"
+        >
+          <div className="flex items-center gap-3">
+            <HelpCircle className="h-5 w-5 text-slate-400" />
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">
+                How repository access and publishing work
+              </h3>
+              <p className="text-xs text-slate-500">
+                Permissions, commit safety, branch handling, and file integrity guarantees.
+              </p>
             </div>
-            <p className="text-[11px] text-zinc-400 pt-1">
-              Choose "All repositories" when installing the app, or add the new repo to the installation at{" "}
-              <a href="https://github.com/settings/installations" target="_blank" rel="noreferrer" className="underline hover:text-zinc-600">
-                github.com/settings/installations
-              </a>
-              , otherwise it will not appear in the list.
-            </p>
+          </div>
+          {isHelpOpen ? (
+            <ChevronUp className="h-4 w-4 text-slate-400" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-slate-400" />
+          )}
+        </button>
+
+        {isHelpOpen && (
+          <div className="p-6 pt-2 border-t border-slate-100 bg-slate-50/40 text-sm text-slate-600 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <h4 className="font-semibold text-slate-900 text-xs uppercase tracking-wider">
+                  Zero Force Pushing
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  SolvCommit never force-pushes or modifies historical commits. All changes are committed forward cleanly to the designated branch.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <h4 className="font-semibold text-slate-900 text-xs uppercase tracking-wider">
+                  Sha256 Collision Prevention
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Before publishing, the system validates the repository path and content hash to prevent accidental file overwrites.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <h4 className="font-semibold text-slate-900 text-xs uppercase tracking-wider">
+                  Scoped Permissions
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Access is governed by your GitHub App installation. You can choose "Only select repositories" on GitHub anytime to restrict access strictly to `leetcode-submissions`.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <h4 className="font-semibold text-slate-900 text-xs uppercase tracking-wider">
+                  Complete Data Ownership
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  You retain 100% intellectual property of your code. SolvCommit acts purely as an automated pipeline from your browser tab to your repository.
+                </p>
+              </div>
+            </div>
           </div>
         )}
-      </div>
-
-      {/* Non-Negotiable Safety Invariant Callout */}
-      <div className="rounded-xl border border-zinc-200/60 bg-zinc-50/70 p-4 text-xs text-zinc-600 space-y-1.5">
-        <div className="font-semibold text-zinc-800">Publishing Safety Guarantees:</div>
-        <ul className="list-disc pl-5 space-y-1 text-zinc-500">
-          <li>Never force-pushes or rewrites existing git history.</li>
-          <li>Never touches or overwrites your custom repository README.</li>
-          <li>Checks target paths by blob SHA to prevent conflicting file overwrites.</li>
-        </ul>
       </div>
     </div>
   );
