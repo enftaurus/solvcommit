@@ -75,7 +75,7 @@ export const SessionsManager: React.FC<SessionsManagerProps> = ({
   const revokedDevices = devices.filter((d) => !!d.revoked_at);
 
   return (
-    <div className="space-y-6 max-w-5xl animate-fadeIn">
+    <div className="space-y-6 w-full animate-fadeIn">
       {/* Page Heading */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
         <div>

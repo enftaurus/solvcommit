@@ -37,39 +37,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-slate-200 flex flex-col justify-between">
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center space-x-3.5">
+            <div className="h-11 w-11 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shadow-xs">
               <img
                 src="/logo.png"
                 alt="SolvCommit"
                 className="h-full w-full object-cover"
               />
             </div>
-            <div className="flex items-baseline space-x-2">
-              <span className="font-bold text-lg tracking-tight text-slate-900">
+            <div className="flex items-baseline space-x-2.5">
+              <span className="font-bold text-2xl tracking-tight text-slate-900">
                 SolvCommit
               </span>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                 v1.0
               </span>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <button
               onClick={onEnterDemo}
-              className="inline-flex items-center space-x-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-800 transition active:scale-98"
+              className="inline-flex items-center space-x-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-800 transition active:scale-98"
             >
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <Sparkles className="h-4 w-4 text-amber-500" />
               <span>Explore Demo</span>
             </button>
             <button
               onClick={handleSignIn}
               disabled={loading}
-              className="inline-flex items-center space-x-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 active:scale-98 transition shadow-sm disabled:opacity-50"
+              className="inline-flex items-center space-x-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 active:scale-98 transition shadow-sm disabled:opacity-50"
             >
-              <Github className="h-4 w-4" />
+              <Github className="h-4.5 w-4.5" />
               <span>{loading ? "Connecting..." : "Sign in with GitHub"}</span>
             </button>
           </div>
@@ -77,48 +77,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-20 space-y-16">
-        <div className="text-center max-w-3xl mx-auto space-y-6">
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-8 pt-16 pb-24 space-y-20">
+        <div className="text-center max-w-4xl mx-auto space-y-6">
           {/* Badge */}
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-2xs text-xs font-semibold text-slate-700">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="inline-flex items-center space-x-2.5 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-2xs text-sm font-semibold text-slate-700">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
             <span>Chrome & Firefox extensions supported • Edge & Safari rolling out soon</span>
           </div>
 
           {/* Heading */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.12]">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-950 leading-[1.1]">
             Your accepted solutions. Automatically on GitHub.
           </h1>
 
           {/* Subheading */}
-          <p className="text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto font-normal">
+          <p className="text-xl sm:text-2xl text-slate-600 leading-relaxed max-w-3xl mx-auto font-normal">
             Connect your GitHub repository and let SolvCommit organize your accepted LeetCode solutions automatically.
           </p>
 
           {/* CTA Group */}
-          <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={handleSignIn}
               disabled={loading}
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2.5 rounded-xl bg-slate-900 px-7 py-3.5 text-base font-semibold text-white hover:bg-slate-800 active:scale-98 transition shadow-sm disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-3 rounded-xl bg-slate-900 px-8 py-4 text-lg font-semibold text-white hover:bg-slate-800 active:scale-98 transition shadow-sm disabled:opacity-50"
             >
               <Github className="h-5 w-5" />
               <span>{loading ? "Connecting..." : "Get started with GitHub"}</span>
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4.5 w-4.5" />
             </button>
 
             <button
               onClick={onEnterDemo}
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 rounded-xl border border-slate-300/90 bg-white px-7 py-3.5 text-base font-semibold text-slate-800 hover:bg-slate-50 active:scale-98 transition shadow-2xs"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2.5 rounded-xl border border-slate-300/90 bg-white px-8 py-4 text-lg font-semibold text-slate-800 hover:bg-slate-50 active:scale-98 transition shadow-2xs"
             >
-              <Sparkles className="h-4 w-4 text-amber-500" />
+              <Sparkles className="h-4.5 w-4.5 text-amber-500" />
               <span>Explore demo</span>
             </button>
           </div>
         </div>
 
         {/* Product Preview Card */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden max-w-4xl mx-auto">
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden max-w-5xl mx-auto">
           {/* Mock Window Top Bar */}
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
@@ -235,12 +235,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
         </div>
 
         {/* Feature Section (User-Facing Benefits) */}
-        <div className="space-y-8 max-w-5xl mx-auto pt-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+        <div className="space-y-10 max-w-7xl w-full mx-auto pt-8">
+          <div className="text-center space-y-3">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
               Built for seamless developer workflows
             </h2>
-            <p className="text-base text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg text-slate-600 max-w-3xl mx-auto">
               Focus on solving algorithms while SolvCommit organizes your repository in the background.
             </p>
           </div>

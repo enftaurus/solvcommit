@@ -11,6 +11,9 @@ import {
   FolderGit2,
   ListFilter,
   ShieldCheck,
+  Flame,
+  Trophy,
+  Calendar,
 } from "lucide-react";
 import { SyncStatus, Repository, SubmissionRow } from "../types";
 
@@ -170,10 +173,10 @@ export const Overview: React.FC<OverviewProps> = ({
         </div>
       </div>
 
-      {/* 2-Column: Destination Repository + Recent Activity */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Destination Repository Card */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm flex flex-col justify-between">
+      {/* 3-Column Wide Dashboard: Destination Repository + Recent Activity + Coding Activity Hub */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Destination Repository Card (4 cols) */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm flex flex-col justify-between lg:col-span-4">
           <div className="space-y-5">
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
               <span className="text-sm font-bold uppercase tracking-wider text-slate-500">
@@ -247,8 +250,8 @@ export const Overview: React.FC<OverviewProps> = ({
           )}
         </div>
 
-        {/* Recent Submissions Feed */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm lg:col-span-2 flex flex-col justify-between">
+        {/* Recent Submissions Feed (5 cols) */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm lg:col-span-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
               <span className="text-sm font-bold uppercase tracking-wider text-slate-500">
@@ -323,6 +326,60 @@ export const Overview: React.FC<OverviewProps> = ({
               Only accepted verdicts are published
             </span>
             <span className="text-slate-400 font-medium">Idempotency enabled</span>
+          </div>
+        </div>
+
+        {/* Developer Activity & Highlights Card (3 cols - fills the corner!) */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm lg:col-span-3 flex flex-col justify-between space-y-5">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <span className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                Developer Activity
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
+                <Flame className="h-3.5 w-3.5 text-orange-500" />
+                Active Streak
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 uppercase">GitHub Sync Status</span>
+                  <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Ready
+                  </span>
+                </div>
+                <div className="text-sm font-semibold text-slate-800">
+                  Every accepted solution turns into a clean GitHub commit.
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 uppercase">Repository Layout</span>
+                  <Trophy className="h-4 w-4 text-amber-500" />
+                </div>
+                <div className="text-sm text-slate-700">
+                  Organized by problem name with readable code extensions.
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 uppercase">Sync Coverage</span>
+                  <Calendar className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="text-sm text-slate-700">
+                  All active languages and multi-solution submissions tracked.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Powered by Eterno Labs</span>
+            <span className="font-semibold text-slate-700">v1.0 Ready</span>
           </div>
         </div>
       </div>

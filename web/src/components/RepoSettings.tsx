@@ -168,7 +168,7 @@ export const RepoSettings: React.FC<RepoSettingsProps> = ({
   const isConfigured = Boolean(currentRepo && !isChangingRepo);
 
   return (
-    <div className="space-y-8 max-w-4xl animate-fadeIn">
+    <div className="space-y-8 w-full animate-fadeIn">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
         <div>

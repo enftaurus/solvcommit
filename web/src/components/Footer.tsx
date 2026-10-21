@@ -26,7 +26,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
       aria-label="Site Footer"
       className="border-t border-slate-200/80 bg-white py-10 text-sm text-slate-500 selection:bg-slate-200"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-5">
+      <div className="max-w-[1536px] mx-auto px-4 sm:px-8 lg:px-12 flex flex-col md:flex-row items-center justify-between gap-5">
         {/* Brand & Dynamic Copyright */}
         <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
           <div className="flex items-center gap-2.5">
@@ -35,6 +35,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
             <span className="font-bold text-slate-900 text-base tracking-tight">SolvCommit</span>
           </div>
+          <span className="hidden sm:inline text-slate-300">•</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200">
+            Product of Eterno Labs
+          </span>
           <span className="hidden sm:inline text-slate-300">•</span>
           <span className="text-sm">© {currentYear} SolvCommit. All rights reserved.</span>
         </div>

@@ -63,7 +63,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl animate-fadeIn">
+    <div className="space-y-6 w-full animate-fadeIn">
       {/* Page Heading */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
