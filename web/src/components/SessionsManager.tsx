@@ -79,64 +79,64 @@ export const SessionsManager: React.FC<SessionsManagerProps> = ({
       {/* Page Heading */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
             Extensions
           </h1>
-          <p className="text-base text-slate-600 mt-1">
+          <p className="text-lg text-slate-600 mt-1">
             Browser extensions authorized to capture and sync accepted solutions.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             Chrome & Firefox ready
           </span>
         </div>
       </div>
 
       {/* Top Banner & Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 bg-white p-7 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <div className="flex items-center space-x-2">
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+          <div className="flex items-center space-x-3">
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
               Paired Browser Extensions
             </h2>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
               {activeDevices.length} Active
             </span>
           </div>
-          <p className="text-sm text-slate-600 mt-1 max-w-xl">
+          <p className="text-base text-slate-600 mt-1.5 max-w-xl">
             Currently paired browser extensions. (Edge & Safari rolling out soon).
           </p>
         </div>
 
-        <div className="flex items-center space-x-2.5">
+        <div className="flex items-center space-x-3">
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200/60"
+            className="p-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
             title="Refresh devices"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
           </button>
           <button
             onClick={() => setIsPairOpen(true)}
-            className="inline-flex items-center space-x-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800 active:scale-[0.99] transition-all shadow-xs"
+            className="inline-flex items-center space-x-2 rounded-xl bg-slate-900 px-5 py-3 text-base font-semibold text-white hover:bg-slate-800 active:scale-[0.99] transition-all shadow-xs"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-5 w-5" />
             <span>Pair Extension</span>
           </button>
         </div>
       </div>
 
       {/* Security Architecture Callout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl border border-slate-200/70 bg-white/70">
-          <div className="flex items-center space-x-2 text-xs font-semibold text-slate-800">
-            <Shield className="h-4 w-4 text-emerald-600" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="p-5 rounded-2xl border border-slate-200 bg-white">
+          <div className="flex items-center space-x-2 text-sm font-bold text-slate-900">
+            <Shield className="h-5 w-5 text-emerald-600" />
             <span>Zero LeetCode Credentials</span>
           </div>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+          <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
             The backend never receives or stores your LeetCode password or session cookie.
             Submissions are read locally in the browser tab.
           </p>

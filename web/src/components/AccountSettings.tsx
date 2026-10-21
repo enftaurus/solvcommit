@@ -67,23 +67,23 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
       {/* Page Heading */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
             Settings
           </h1>
-          <p className="text-base text-slate-600 mt-1">
+          <p className="text-lg text-slate-600 mt-1">
             Manage your SolvCommit account, pipeline controls, and preferences.
           </p>
         </div>
       </div>
 
       {/* Sync Pipeline Pause / Resume */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="bg-white p-7 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
           <div>
-            <div className="flex items-center space-x-2">
-              <h3 className="text-base font-bold text-slate-900">Pipeline Synchronization</h3>
+            <div className="flex items-center space-x-3">
+              <h3 className="text-xl font-bold text-slate-900">Pipeline Synchronization</h3>
               <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
                   syncStatus.is_paused
                     ? "bg-amber-50 text-amber-700 border-amber-200"
                     : "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -92,7 +92,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
                 {syncStatus.is_paused ? "Paused" : "Active"}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1 max-w-xl">
+            <p className="text-base text-slate-600 mt-1.5 max-w-xl">
               Temporarily suspend publishing without losing submissions. New submissions received
               from paired extensions will stay safely queued in Kafka until resumed.
             </p>
@@ -101,7 +101,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
           <button
             onClick={handleToggleSync}
             disabled={isTogglingSync}
-            className={`inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-medium transition-all shadow-xs active:scale-[0.99] disabled:opacity-50 ${
+            className={`inline-flex items-center space-x-2.5 px-5 py-3 rounded-xl text-base font-semibold transition-all shadow-xs active:scale-[0.99] disabled:opacity-50 ${
               syncStatus.is_paused
                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                 : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200"
@@ -109,12 +109,12 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
           >
             {syncStatus.is_paused ? (
               <>
-                <Play className="h-3.5 w-3.5 fill-current" />
+                <Play className="h-4 w-4 fill-current" />
                 <span>{isTogglingSync ? "Resuming..." : "Resume Pipeline"}</span>
               </>
             ) : (
               <>
-                <Pause className="h-3.5 w-3.5 fill-current" />
+                <Pause className="h-4 w-4 fill-current" />
                 <span>{isTogglingSync ? "Pausing..." : "Pause Pipeline"}</span>
               </>
             )}
@@ -123,11 +123,11 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({
       </div>
 
       {/* Browser Extension Installation & Setup Guide */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-7 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Extension Setup Guide</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <h3 className="text-xl font-bold text-slate-900">Extension Setup Guide</h3>
+            <p className="text-base text-slate-600 mt-1">
               Install SolvCommit in Chrome or Firefox to capture your accepted LeetCode submissions.
             </p>
           </div>

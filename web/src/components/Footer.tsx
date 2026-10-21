@@ -24,23 +24,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer
       role="contentinfo"
       aria-label="Site Footer"
-      className="border-t border-slate-200/80 bg-white py-8 text-xs text-slate-500 selection:bg-slate-200"
+      className="border-t border-slate-200/80 bg-white py-10 text-sm text-slate-500 selection:bg-slate-200"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-5">
         {/* Brand & Dynamic Copyright */}
-        <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden">
               <img src="/logo.png" alt="SolvCommit" className="h-full w-full object-cover" />
             </div>
-            <span className="font-bold text-slate-900 text-sm tracking-tight">SolvCommit</span>
+            <span className="font-bold text-slate-900 text-base tracking-tight">SolvCommit</span>
           </div>
           <span className="hidden sm:inline text-slate-300">•</span>
-          <span>© {currentYear} SolvCommit. All rights reserved.</span>
+          <span className="text-sm">© {currentYear} SolvCommit. All rights reserved.</span>
         </div>
 
         {/* Legal & Support Links */}
-        <nav aria-label="Legal and Support Links" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+        <nav aria-label="Legal and Support Links" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 text-sm font-medium">
           <a
             href="/"
             onClick={(e) => handleLinkClick(e, "/")}
@@ -51,17 +51,17 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <a
             href="/privacy"
             onClick={(e) => handleLinkClick(e, "/privacy")}
-            className="inline-flex items-center gap-1 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-1.5 hover:text-slate-900 transition-colors"
           >
-            <Shield className="h-3.5 w-3.5 text-slate-400" />
+            <Shield className="h-4 w-4 text-slate-400" />
             <span>Privacy Policy</span>
           </a>
           <a
             href="/terms"
             onClick={(e) => handleLinkClick(e, "/terms")}
-            className="inline-flex items-center gap-1 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-1.5 hover:text-slate-900 transition-colors"
           >
-            <FileText className="h-3.5 w-3.5 text-slate-400" />
+            <FileText className="h-4 w-4 text-slate-400" />
             <span>Terms of Service</span>
           </a>
           <a
