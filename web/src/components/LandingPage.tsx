@@ -135,7 +135,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
               <span className="h-3 w-3 rounded-full bg-slate-300" />
               <span className="h-3 w-3 rounded-full bg-slate-300" />
               <span className="ml-2 font-mono text-xs text-slate-500">
-                github.com/user/leetcode-solutions
+                github.com/user/leetcode-submissions
               </span>
             </div>
             <span className="text-[11px] font-mono text-slate-400">git branch: main</span>
@@ -147,7 +147,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDemo }) => {
                 Deterministic Repository Structure
               </div>
               <div className="rounded-xl bg-slate-900 p-4 text-slate-200 space-y-1.5">
-                <div className="text-emerald-400">leetcode-solutions/</div>
+                <div className="text-emerald-400">leetcode-submissions/</div>
                 <div className="pl-4 text-slate-300">├── README.md</div>
                 <div className="pl-4 text-slate-400">└── problems/</div>
                 <div className="pl-8 text-slate-300">├── two-sum/</div>

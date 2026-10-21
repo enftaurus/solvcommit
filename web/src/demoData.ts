@@ -13,7 +13,7 @@ export const demoRepo: Repository = {
   user_id: "usr-demo-774921",
   github_repo_id: 10293847,
   owner: "octocat",
-  name: "leetcode-solutions",
+  name: "leetcode-submissions",
   default_branch: "main",
   status: "active",
   created_at: new Date(Date.now() - 40 * 86400000).toISOString(),
@@ -24,7 +24,7 @@ export const demoAvailableRepos: GitHubRepoInfo[] = [
   {
     id: 10293847,
     owner: "octocat",
-    name: "leetcode-solutions",
+    name: "leetcode-submissions",
     default_branch: "main",
     private: false,
   },
