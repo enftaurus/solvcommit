@@ -2,7 +2,7 @@
 // Manages authentication tokens, offline submission queue, periodic retry, and backfill.
 
 if (typeof importScripts === "function") {
-  if (typeof WEB_BASE === "undefined") {
+  if (typeof self.FRONTEND_URL === "undefined" || typeof self.API_BASE_URL === "undefined") {
     try { importScripts("config.js"); } catch (e) {}
   }
   if (typeof OfflineQueue === "undefined") {
@@ -11,7 +11,8 @@ if (typeof importScripts === "function") {
 }
 
 const extAPI = typeof browser !== "undefined" ? browser : chrome;
-const API_BASE_URL = typeof WEB_BASE !== "undefined" ? WEB_BASE : "http://localhost:8080";
+const API_BASE = (typeof self !== "undefined" && self.API_BASE_URL) || (typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "https://api.solvcommit.eterno.software");
+const FRONTEND_BASE = (typeof self !== "undefined" && self.FRONTEND_URL) || (typeof FRONTEND_URL !== "undefined" ? FRONTEND_URL : "https://solvcommit.eterno.software");
 
 const storageAdapter = {
   get: (key) => new Promise((resolve) => extAPI.storage.local.get(key, resolve)),
@@ -39,7 +40,7 @@ let refreshing = null;
 async function refreshAccessToken() {
   const { device_id, refresh_token } = await storageAdapter.get(['device_id', 'refresh_token']);
   if (!device_id || !refresh_token) throw new Error('not paired');
-  const res = await fetch(`${API_BASE_URL}/api/v1/devices/refresh`, {
+  const res = await fetch(`${API_BASE}/api/v1/devices/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ device_id, refresh_token })
@@ -83,7 +84,7 @@ async function authedFetch(url, init = {}) {
 // SolvCommit API Client
 const apiClient = {
   async submit(item) {
-    const res = await authedFetch(`${API_BASE_URL}/api/v1/sync/submissions`, {
+    const res = await authedFetch(`${API_BASE}/api/v1/sync/submissions`, {
       method: "POST",
       body: JSON.stringify({
         submission_id: String(item.submission_id),
@@ -110,7 +111,7 @@ const apiClient = {
   },
 
   async getMissingSubmissions(submissionIDs) {
-    const res = await authedFetch(`${API_BASE_URL}/api/v1/sync/backfill`, {
+    const res = await authedFetch(`${API_BASE}/api/v1/sync/backfill`, {
       method: "POST",
       body: JSON.stringify({ submission_ids: submissionIDs.map(String) })
     });
@@ -197,9 +198,13 @@ extAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
           return sendResponse({ ok: false, error: "invalid sender url" });
         }
 
-        const expectedOrigin = new URL(API_BASE_URL).origin;
+        const expectedFrontendOrigin = new URL(FRONTEND_BASE).origin;
+        const expectedApiOrigin = new URL(API_BASE).origin;
         const isAllowedOrigin =
-          senderOrigin === expectedOrigin ||
+          senderOrigin === expectedFrontendOrigin ||
+          senderOrigin === expectedApiOrigin ||
+          senderOrigin === "https://solvcommit.eterno.software" ||
+          senderOrigin === "https://api.solvcommit.eterno.software" ||
           senderOrigin === "http://localhost:8080" ||
           senderOrigin === "http://127.0.0.1:8080" ||
           senderOrigin === "http://localhost:3000" ||
@@ -207,7 +212,7 @@ extAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
           senderOrigin.startsWith("http://127.0.0.1:");
 
         if (!isAllowedOrigin) {
-          console.warn("[SolvCommit Background] Origin mismatch. Sender:", senderOrigin, "Expected:", expectedOrigin);
+          console.warn("[SolvCommit Background] Origin mismatch. Sender:", senderOrigin, "Expected:", expectedFrontendOrigin);
           return sendResponse({ ok: false, error: "origin mismatch" });
         }
 

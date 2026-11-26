@@ -16,7 +16,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const submitPairBtn = document.getElementById("submitPairBtn");
   const pairError = document.getElementById("pairError");
 
-  const baseUrl = typeof WEB_BASE !== "undefined" ? WEB_BASE : "http://localhost:8080";
+  const frontendUrl = (typeof FRONTEND_URL !== "undefined" && FRONTEND_URL) ||
+    (typeof WEB_BASE !== "undefined" && WEB_BASE) ||
+    "https://solvcommit.eterno.software";
+  const apiUrl = (typeof API_BASE_URL !== "undefined" && API_BASE_URL) ||
+    "https://api.solvcommit.eterno.software";
 
   function refreshStatus() {
     extAPI.runtime.sendMessage({ action: "GET_QUEUE_STATUS" }, (res) => {
@@ -42,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Probe backend liveness
   try {
-    const probe = await fetch(`${baseUrl}/api/v1/health/live`).catch(() => null);
+    const probe = await fetch(`${apiUrl}/api/v1/health/live`).catch(() => null);
     if (probe && probe.ok) {
       healthVal.textContent = "Online";
       healthVal.style.color = "#34d399";
@@ -64,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         pair_state: state,
         pair_state_exp: exp,
       });
-      extAPI.tabs.create({ url: `${baseUrl}/connect-extension?state=${encodeURIComponent(state)}` });
+      extAPI.tabs.create({ url: `${frontendUrl}/connect-extension?state=${encodeURIComponent(state)}` });
     });
   }
 
@@ -124,14 +128,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   openDashboardBtn.addEventListener("click", () => {
-    extAPI.tabs.create({ url: baseUrl });
+    extAPI.tabs.create({ url: frontendUrl });
   });
 
   const linkPrivacy = document.getElementById("linkPrivacy");
   if (linkPrivacy) {
     linkPrivacy.addEventListener("click", (e) => {
       e.preventDefault();
-      extAPI.tabs.create({ url: `${baseUrl}/privacy` });
+      extAPI.tabs.create({ url: `${frontendUrl}/privacy` });
     });
   }
 
@@ -139,7 +143,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (linkTerms) {
     linkTerms.addEventListener("click", (e) => {
       e.preventDefault();
-      extAPI.tabs.create({ url: `${baseUrl}/terms` });
+      extAPI.tabs.create({ url: `${frontendUrl}/terms` });
     });
   }
 
@@ -147,7 +151,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (linkSupport) {
     linkSupport.addEventListener("click", (e) => {
       e.preventDefault();
-      extAPI.tabs.create({ url: `${baseUrl}/support` });
+      extAPI.tabs.create({ url: `${frontendUrl}/support` });
     });
   }
 });

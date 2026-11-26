@@ -19,6 +19,8 @@ async function simulatePairFromPortal({
   const expected = new URL(expectedOrigin).origin;
   const isAllowedOrigin =
     senderOrigin === expected ||
+    senderOrigin === "https://solvcommit.eterno.software" ||
+    senderOrigin === "https://api.solvcommit.eterno.software" ||
     senderOrigin.startsWith("http://localhost:") ||
     senderOrigin.startsWith("http://127.0.0.1:");
 
@@ -68,8 +70,8 @@ test("Pairing from portal - Successful pairing stores credentials and clears sta
   };
 
   const res = await simulatePairFromPortal({
-    senderUrl: "http://localhost:8080/connect-extension?state=random-uuid-1234",
-    expectedOrigin: "http://localhost:8080",
+    senderUrl: "https://solvcommit.eterno.software/connect-extension?state=random-uuid-1234",
+    expectedOrigin: "https://solvcommit.eterno.software",
     payload,
     stored: storage,
     setStorage: async (data) => {
@@ -93,7 +95,7 @@ test("Pairing from portal - Rejects origin mismatch", async () => {
 
   const res = await simulatePairFromPortal({
     senderUrl: "https://evil.com/connect-extension",
-    expectedOrigin: "http://localhost:8080",
+    expectedOrigin: "https://solvcommit.eterno.software",
     payload: { state: "uuid-123", deviceID: "d1", accessToken: "a1", refreshToken: "r1" },
     stored: storage,
     setStorage: async () => {},
@@ -110,8 +112,8 @@ test("Pairing from portal - Rejects state mismatch", async () => {
   };
 
   const res = await simulatePairFromPortal({
-    senderUrl: "http://localhost:8080/connect-extension",
-    expectedOrigin: "http://localhost:8080",
+    senderUrl: "https://solvcommit.eterno.software/connect-extension",
+    expectedOrigin: "https://solvcommit.eterno.software",
     payload: { state: "attacker-state", deviceID: "d1", accessToken: "a1", refreshToken: "r1" },
     stored: storage,
     setStorage: async () => {},
@@ -128,8 +130,8 @@ test("Pairing from portal - Rejects expired state", async () => {
   };
 
   const res = await simulatePairFromPortal({
-    senderUrl: "http://localhost:8080/connect-extension",
-    expectedOrigin: "http://localhost:8080",
+    senderUrl: "https://solvcommit.eterno.software/connect-extension",
+    expectedOrigin: "https://solvcommit.eterno.software",
     payload: { state: "expired-state", deviceID: "d1", accessToken: "a1", refreshToken: "r1" },
     stored: storage,
     setStorage: async () => {},

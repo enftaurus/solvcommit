@@ -9,6 +9,8 @@
   ],
   "host_permissions": [
     "https://leetcode.com/*",
+    "https://solvcommit.eterno.software/*",
+    "https://api.solvcommit.eterno.software/*",
     "http://localhost/*",
     "http://127.0.0.1/*",
     "https://*/*"
@@ -45,6 +47,8 @@
     },
     {
       "matches": [
+        "https://solvcommit.eterno.software/connect-extension*",
+        "https://api.solvcommit.eterno.software/connect-extension*",
         "http://localhost/connect-extension*",
         "http://127.0.0.1/connect-extension*",
         "https://*/connect-extension*"
